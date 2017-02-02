@@ -12,6 +12,13 @@ Documentation is available via
 gohm provides a small collection of HTTP middleware functions to be used when creating a Go micro
 webservice.
 
+Here is a simple example:
+
+```Go
+    mux := http.NewServeMux()
+    mux.Handle("/static/", gohm.ErrorLogHandler(os.Stderr, gohm.PanicHandler(gohm.GzipHandler(gohm.TimeoutHandler(30 * time.Second, someHandler))))
+```
+
 ## Supported Use Cases
 
 ### Error helper function
@@ -52,6 +59,11 @@ increments the specified counter when the response status code is not http.Statu
 
 ErrorLogHandler returns a new http.Handler that logs HTTP requests that result in response
 errors. The handler will output lines in common log format to the specified io.Writer.
+
+```Go
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.ErrorLogHandler(os.Stderr, decodeURI(expand(querier))))
+```
 
 ### GzipHandler
 
