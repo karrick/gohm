@@ -16,7 +16,7 @@ func PanicHandler(next http.Handler) http.Handler {
 				case error:
 					text = t.Error()
 				case string:
-
+					text = t
 				default:
 					text = fmt.Sprintf("%v", r)
 				}
