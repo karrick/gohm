@@ -101,6 +101,61 @@ logging upstream if desired.
 	mux.Handle("/example/path", gohm.PanicHandler(onlyGet(decodeURI(expand(querier)))))
 ```
 
+### Status1xxCounterHandler
+
+Status1xxCounterHandler returns a new http.Handler that composes the specified next http.Handler, and
+increments the specified counter when the response status code is not 1xx.
+
+```Go
+	var counter = expvar.NewInt("counter1xx")
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.Status1xxCounter(counter, decodeURI(expand(querier))))
+```
+
+### Status2xxCounterHandler
+
+Status2xxCounterHandler returns a new http.Handler that composes the specified next http.Handler, and
+increments the specified counter when the response status code is not 2xx.
+
+```Go
+	var counter = expvar.NewInt("counter2xx")
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.Status2xxCounter(counter, decodeURI(expand(querier))))
+```
+
+### Status3xxCounterHandler
+
+Status3xxCounterHandler returns a new http.Handler that composes the specified next http.Handler, and
+increments the specified counter when the response status code is not 3xx.
+
+```Go
+	var counter = expvar.NewInt("counter3xx")
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.Status3xxCounter(counter, decodeURI(expand(querier))))
+```
+
+### Status4xxCounterHandler
+
+Status4xxCounterHandler returns a new http.Handler that composes the specified next http.Handler, and
+increments the specified counter when the response status code is not 4xx.
+
+```Go
+	var counter = expvar.NewInt("counter4xx")
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.Status4xxCounter(counter, decodeURI(expand(querier))))
+```
+
+### Status5xxCounterHandler
+
+Status5xxCounterHandler returns a new http.Handler that composes the specified next http.Handler, and
+increments the specified counter when the response status code is not 5xx.
+
+```Go
+	var counter = expvar.NewInt("counter5xx")
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.Status5xxCounter(counter, decodeURI(expand(querier))))
+```
+
 ### TimeoutHandler
 
 TimeoutHandler returns a new http.Handler that modifies creates a new http.Request instance with the
