@@ -16,8 +16,13 @@ Here is a simple example:
 
 ```Go
     mux := http.NewServeMux()
-    mux.Handle("/static/", gohm.ErrorLogHandler(os.Stderr, gohm.PanicHandler(gohm.GzipHandler(gohm.TimeoutHandler(30 * time.Second, someHandler))))
+    mux.Handle("/static/", gohm.ErrorLogHandler(os.Stderr, gohm.TimeoutHandler(30 * time.Second, gohm.PanicHandler(gohm.GzipHandler(someHandler))))
 ```
+
+*NOTE:* When both the `TimeoutHandler` and the `PanicHandler` are used, the `TimeoutHandler` ought
+to precede the `PanicHandler`.  This is because timeout handlers in Go are generally implemented
+using a separate Go routine, and the panic could occur in an alternate go routine and not get caught
+by the `PanicHandler`.
 
 ## Supported Use Cases
 
