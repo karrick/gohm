@@ -15,7 +15,8 @@ func ErrorCountHandler(errorCount *expvar.Int, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		eh := &errorCountHandler{ResponseWriter: w}
 		next.ServeHTTP(eh, r)
-		if eh.status != http.StatusOK {
+		// NOTE: check for status zero value because when omitted by handler, it's filled in later in http stack
+		if eh.status != http.StatusOK && eh.status != 0 {
 			errorCount.Add(1)
 		}
 	})

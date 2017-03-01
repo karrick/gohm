@@ -9,10 +9,7 @@ import (
 )
 
 func TestPanicHandler(t *testing.T) {
-	req, err := http.NewRequest("GET", "", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	req := httptest.NewRequest("GET", "/some/url", nil)
 
 	handler := gohm.PanicHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("some horrible event took place")

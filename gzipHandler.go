@@ -20,9 +20,9 @@ func GzipHandler(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		w.Header().Set("Content-Encoding", "gzip")
 		gz := gzip.NewWriter(w)
 		defer func() { _ = gz.Close() }()
+		w.Header().Set("Content-Encoding", "gzip")
 		next.ServeHTTP(gzipResponseWriter{ResponseWriter: w, gzipWriter: gz}, r)
 	})
 }

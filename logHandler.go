@@ -23,7 +23,8 @@ func ErrorLogHandler(out io.Writer, next http.Handler) http.Handler {
 		begin := time.Now()
 		next.ServeHTTP(lrw, r)
 
-		if lrw.status != http.StatusOK {
+		// NOTE: check for status zero value because when omitted by handler, it's filled in later in http stack
+		if lrw.status != http.StatusOK && lrw.status != 0 {
 			end := time.Now()
 			clientIP := r.RemoteAddr
 			if colon := strings.LastIndex(clientIP, ":"); colon != -1 {
