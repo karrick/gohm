@@ -43,7 +43,7 @@ func Status1xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch := &counterHandler{ResponseWriter: w}
 		next.ServeHTTP(ch, r)
-		if !member(ch.status, 100) {
+		if member(ch.status, 100) {
 			counter.Add(1)
 		}
 	})
@@ -61,7 +61,7 @@ func Status2xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 		next.ServeHTTP(ch, r)
 		// NOTE: Also need to check for zero-value of status variable, because when omitted
 		// by handler, it's filled in later in http stack.
-		if ch.status != 0 && !member(ch.status, 200) {
+		if ch.status == 0 || member(ch.status, 200) {
 			counter.Add(1)
 		}
 	})
@@ -77,7 +77,7 @@ func Status3xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch := &counterHandler{ResponseWriter: w}
 		next.ServeHTTP(ch, r)
-		if !member(ch.status, 300) {
+		if member(ch.status, 300) {
 			counter.Add(1)
 		}
 	})
@@ -93,7 +93,7 @@ func Status4xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch := &counterHandler{ResponseWriter: w}
 		next.ServeHTTP(ch, r)
-		if !member(ch.status, 400) {
+		if member(ch.status, 400) {
 			counter.Add(1)
 		}
 	})
@@ -109,7 +109,7 @@ func Status5xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch := &counterHandler{ResponseWriter: w}
 		next.ServeHTTP(ch, r)
-		if !member(ch.status, 500) {
+		if member(ch.status, 500) {
 			counter.Add(1)
 		}
 	})
