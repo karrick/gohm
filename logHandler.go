@@ -11,6 +11,10 @@ import (
 const apacheLogFormat = "%s [%s] \"%s\" %d %d %f\n"
 const timeFormat = "02/Jan/2006:15:04:05 MST"
 
+func member(group, status int) bool {
+	return status/group == 1 && status%group < 100
+}
+
 // ErrorLogHandler returns a new http.Handler that logs HTTP requests that result in response
 // errors. The handler will output lines in common log format to the specified io.Writer.
 func ErrorLogHandler(out io.Writer, next http.Handler) http.Handler {
@@ -24,7 +28,7 @@ func ErrorLogHandler(out io.Writer, next http.Handler) http.Handler {
 		next.ServeHTTP(lrw, r)
 
 		// NOTE: check for status zero value because when omitted by handler, it's filled in later in http stack
-		if lrw.status != http.StatusOK && lrw.status != 0 {
+		if lrw.status != 0 && !member(100, lrw.status) && !member(200, lrw.status) && !member(300, lrw.status) {
 			end := time.Now()
 			clientIP := r.RemoteAddr
 			if colon := strings.LastIndex(clientIP, ":"); colon != -1 {
