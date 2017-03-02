@@ -16,7 +16,7 @@ func TestStatus1xxCounterHandlerGood(t *testing.T) {
 	response := "gimme more!!!"
 	status := http.StatusContinue
 
-	handler := gohm.Status1xxCounterHandler(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.Status1xxCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write([]byte(response))
 	}))
@@ -45,7 +45,7 @@ func TestStatus1xxCounterHandlerBad(t *testing.T) {
 	response := "record created"
 	status := http.StatusCreated
 
-	handler := gohm.Status1xxCounterHandler(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.Status1xxCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write([]byte(response))
 	}))
@@ -74,7 +74,7 @@ func TestStatus2xxCounterHandlerWriteHeaderElided(t *testing.T) {
 	response := "elided"
 	status := http.StatusOK
 
-	handler := gohm.Status2xxCounterHandler(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.Status2xxCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(response))
 	}))
 
@@ -100,9 +100,9 @@ func TestStatus2xxCounterHandlerGood(t *testing.T) {
 
 	counter := expvar.NewInt("counter-status-accepted")
 	response := "gimme more!!!"
-	status := http.StatusAccepted
+	status := http.StatusAccepted // 202
 
-	handler := gohm.Status2xxCounterHandler(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.Status2xxCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write([]byte(response))
 	}))
@@ -131,7 +131,7 @@ func TestStatus2xxCounterHandlerBad(t *testing.T) {
 	response := "record created"
 	status := http.StatusProcessing
 
-	handler := gohm.Status2xxCounterHandler(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.Status2xxCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write([]byte(response))
 	}))
@@ -160,7 +160,7 @@ func TestStatus3xxCounterHandlerGood(t *testing.T) {
 	response := "I found it"
 	status := http.StatusFound
 
-	handler := gohm.Status3xxCounterHandler(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.Status3xxCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write([]byte(response))
 	}))
@@ -189,7 +189,7 @@ func TestStatus3xxCounterHandlerBad(t *testing.T) {
 	response := "record created"
 	status := http.StatusAlreadyReported
 
-	handler := gohm.Status3xxCounterHandler(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.Status3xxCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write([]byte(response))
 	}))
@@ -218,7 +218,7 @@ func TestStatus4xxCounterHandlerGood(t *testing.T) {
 	response := "gimme more!!!"
 	status := http.StatusBadRequest
 
-	handler := gohm.Status4xxCounterHandler(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.Status4xxCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write([]byte(response))
 	}))
@@ -247,7 +247,7 @@ func TestStatus4xxCounterHandlerBad(t *testing.T) {
 	response := "record created"
 	status := http.StatusSeeOther
 
-	handler := gohm.Status4xxCounterHandler(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.Status4xxCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write([]byte(response))
 	}))
@@ -276,7 +276,7 @@ func TestStatus5xxCounterHandlerGood(t *testing.T) {
 	response := "gimme more!!!"
 	status := http.StatusInternalServerError
 
-	handler := gohm.Status5xxCounterHandler(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.Status5xxCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write([]byte(response))
 	}))
@@ -305,7 +305,7 @@ func TestStatus5xxCounterHandlerBad(t *testing.T) {
 	response := "record created"
 	status := http.StatusUnauthorized
 
-	handler := gohm.Status5xxCounterHandler(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.Status5xxCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write([]byte(response))
 	}))

@@ -17,6 +17,7 @@ import (
 //		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 //			if r.Method != "GET" {
 //				gohm.Error(w, r.Method, http.StatusMethodNotAllowed)
+//				// 405 Method Not Allowed: POST
 //				return
 //			}
 //			next.ServeHTTP(w, r)

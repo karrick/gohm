@@ -10,12 +10,12 @@ import (
 	"github.com/karrick/gohm"
 )
 
-func TestGzipHandlerUncompressed(t *testing.T) {
+func TestGzipUncompressed(t *testing.T) {
 	req := httptest.NewRequest("GET", "/some/url", nil)
 
 	response := "{pi:3.14159265}"
 
-	handler := gohm.GzipHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.WithGzip(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(response))
 	}))
 
@@ -36,13 +36,13 @@ func TestGzipHandlerUncompressed(t *testing.T) {
 	}
 }
 
-func TestGzipHandlerCompressed(t *testing.T) {
+func TestGzipCompressed(t *testing.T) {
 	req := httptest.NewRequest("GET", "/some/url", nil)
 	req.Header.Set("Accept-Encoding", "gzip")
 
 	response := "{pi:3.14159265}"
 
-	handler := gohm.GzipHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.WithGzip(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(response))
 	}))
 

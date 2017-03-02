@@ -9,12 +9,12 @@ import (
 	"github.com/karrick/gohm"
 )
 
-func TestTimeoutHandlerNoTimeout(t *testing.T) {
+func TestWithTimeoutWhenNoTimeout(t *testing.T) {
 	req := httptest.NewRequest("GET", "/some/url", nil)
 
 	response := "{pi:3.14159265}"
 
-	handler := gohm.TimeoutHandler(time.Second, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.WithTimeout(time.Second, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(response))
 	}))
 
@@ -31,12 +31,12 @@ func TestTimeoutHandlerNoTimeout(t *testing.T) {
 	}
 }
 
-func TestTimeoutHandlerTimeout(t *testing.T) {
+func TestWithTimeoutWhenTimeout(t *testing.T) {
 	req := httptest.NewRequest("GET", "/some/url", nil)
 
 	response := "{pi:3.14159265}"
 
-	handler := gohm.TimeoutHandler(time.Millisecond, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.WithTimeout(time.Millisecond, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(time.Second)
 		w.Write([]byte(response))
 	}))
