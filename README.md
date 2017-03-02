@@ -96,6 +96,17 @@ increments the specified counter when the response status code is not 1xx.
     mux.Handle("/example/path", gohm.Status1xxCounter(counter, decodeURI(expand(querier))))
 ```
 
+### StatusAllCounter
+
+`StatusAllCounter` returns a new `http.Handler` that composes the specified next `http.Handler`, and
+increments the specified counter for every query.
+
+```Go
+    var counter = expvar.NewInt("counterAll")
+    mux := http.NewServeMux()
+    mux.Handle("/example/path", gohm.StatusAllCounter(counter, decodeURI(expand(querier))))
+```
+
 ### Status2xxCounter
 
 `Status2xxCounter` returns a new `http.Handler` that composes the specified next `http.Handler`, and

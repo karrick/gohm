@@ -9,6 +9,64 @@ import (
 	"github.com/karrick/gohm"
 )
 
+func TestStatusAllCounterHandlerGood(t *testing.T) {
+	req := httptest.NewRequest("GET", "/some/url", nil)
+
+	counter := expvar.NewInt("counter-status-all-good")
+	response := "gimme more!!!"
+	status := http.StatusContinue
+
+	handler := gohm.StatusAllCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(status)
+		w.Write([]byte(response))
+	}))
+
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if actual, expected := counter.Value(), int64(1); actual != expected {
+		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+
+	if actual, expected := rr.Body.String(), response; actual != expected {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+
+	if actual, expected := rr.Code, status; actual != expected {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+}
+
+func TestStatusAllCounterHandlerBad(t *testing.T) {
+	req := httptest.NewRequest("GET", "/some/url", nil)
+
+	counter := expvar.NewInt("counter-status-all-bad")
+	response := "what?"
+	status := http.StatusNotFound
+
+	handler := gohm.StatusAllCounter(counter, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(status)
+		w.Write([]byte(response))
+	}))
+
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if actual, expected := counter.Value(), int64(1); actual != expected {
+		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+
+	if actual, expected := rr.Body.String(), response; actual != expected {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+
+	if actual, expected := rr.Code, status; actual != expected {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+}
+
 func TestStatus1xxCounterHandlerGood(t *testing.T) {
 	req := httptest.NewRequest("GET", "/some/url", nil)
 

@@ -19,6 +19,20 @@ func member(status, group int) bool {
 	return status/group == 1 && status%group < 100
 }
 
+// StatusAllCounter returns a new http.Handler that composes the specified next http.Handler,
+// and increments the specified counter for every query.
+//
+//	var counterAll = expvar.NewInt("counterAll")
+//	mux := http.NewServeMux()
+//	mux.Handle("/example/path", gohm.StatusAllCounter(counterAll, decodeURI(expand(querier))))
+func StatusAllCounter(counter *expvar.Int, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ch := &counterHandler{ResponseWriter: w}
+		next.ServeHTTP(ch, r)
+		counter.Add(1)
+	})
+}
+
 // Status1xxCounter returns a new http.Handler that composes the specified next http.Handler,
 // and increments the specified counter when the response status code is not 1xx.
 //
