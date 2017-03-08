@@ -72,7 +72,7 @@ func LogErrors(out io.Writer, next http.Handler) http.Handler {
 		begin := time.Now()
 		next.ServeHTTP(lrw, r)
 
-		if !member(lrw.status, 100) && !member(lrw.status, 200) && !member(lrw.status, 300) {
+		if member(lrw.status, 400) || member(lrw.status, 500) {
 			end := time.Now()
 			clientIP := r.RemoteAddr
 			if colon := strings.LastIndex(clientIP, ":"); colon != -1 {
