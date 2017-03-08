@@ -72,9 +72,7 @@ func LogErrors(out io.Writer, next http.Handler) http.Handler {
 		begin := time.Now()
 		next.ServeHTTP(lrw, r)
 
-		// NOTE: Also need to check for zero-value of status variable, because when omitted
-		// by handler, it's filled in later in http stack.
-		if lrw.status != 0 && !member(lrw.status, 100) && !member(lrw.status, 200) && !member(lrw.status, 300) {
+		if !member(lrw.status, 100) && !member(lrw.status, 200) && !member(lrw.status, 300) {
 			end := time.Now()
 			clientIP := r.RemoteAddr
 			if colon := strings.LastIndex(clientIP, ":"); colon != -1 {
