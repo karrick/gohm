@@ -218,20 +218,3 @@ func BenchmarkLogCommonFormatter(b *testing.B) {
 		logOutput.Reset()
 	}
 }
-
-func BenchmarkLogCustomFormatter(b *testing.B) {
-	logBitmask := uint32(1 | 2 | 4 | 8 | 16)
-	logOutput := new(bytes.Buffer)
-
-	handler := gohm.LogStatusBitmaskWithFormat("{client-ip} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}",
-		&logBitmask,
-		logOutput,
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-
-	for i := 0; i < b.N; i++ {
-		req := httptest.NewRequest("GET", "/some/url", nil)
-		rr := httptest.NewRecorder()
-		handler.ServeHTTP(rr, req)
-		logOutput.Reset()
-	}
-}
