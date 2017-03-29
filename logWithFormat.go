@@ -2,9 +2,9 @@ package gohm
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -69,26 +69,24 @@ func LogStatusBitmaskWithFormat(format string, bitmask *uint32, out io.Writer, n
 		case 5:
 			bit = 16
 		}
-		bm := atomic.LoadUint32(bitmask)
 
-		if bit == 0 || bm&bit > 0 {
+		if bit == 0 || (atomic.LoadUint32(bitmask))&bit > 0 {
 			lrw.end = time.Now()
 			buf := new(bytes.Buffer)
 			for _, emitter := range emitters {
-				if _, err := emitter(lrw, r, buf); err != nil {
-					panic(err) // TODO
-				}
+				emitter(lrw, r, buf)
 			}
 			if _, err := out.Write(buf.Bytes()); err != nil {
-				panic(err) // TODO
+				// if we cannot write to out for some reason, write it to stderr
+				_, _ = buf.WriteTo(os.Stderr)
 			}
 		}
 	})
 }
 
-func compileFormat(format string) []func(*loggedResponseWriter, *http.Request, io.Writer) (int, error) {
+func compileFormat(format string) []func(*loggedResponseWriter, *http.Request, *bytes.Buffer) {
 	// build slice of emitter functions, each will emit the requested information into the output
-	var emitters []func(*loggedResponseWriter, *http.Request, io.Writer) (int, error)
+	var emitters []func(*loggedResponseWriter, *http.Request, *bytes.Buffer)
 
 	// state machine alternating between two states: either capturing runes for the next
 	// constant buffer, or capturing runes for the next token
@@ -190,83 +188,83 @@ func compileFormat(format string) []func(*loggedResponseWriter, *http.Request, i
 	return emitters
 }
 
-func makeStringEmitter(value string) func(*loggedResponseWriter, *http.Request, io.Writer) (int, error) {
-	return func(_ *loggedResponseWriter, _ *http.Request, iow io.Writer) (int, error) {
-		return iow.Write([]byte(value))
+func makeStringEmitter(value string) func(*loggedResponseWriter, *http.Request, *bytes.Buffer) {
+	return func(_ *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+		bb.WriteString(value)
 	}
 }
 
-func beginEmitter(lrw *loggedResponseWriter, _ *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(lrw.begin.UTC().Format(apacheTimeFormat)))
+func beginEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(lrw.begin.UTC().Format(apacheTimeFormat))
 }
 
-func beginEpochEmitter(lrw *loggedResponseWriter, _ *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(strconv.FormatInt(lrw.begin.UTC().Unix(), 10)))
+func beginEpochEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(strconv.FormatInt(lrw.begin.UTC().Unix(), 10))
 }
 
-func beginISO8601Emitter(lrw *loggedResponseWriter, _ *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(lrw.begin.UTC().Format(time.RFC3339)))
+func beginISO8601Emitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(lrw.begin.UTC().Format(time.RFC3339))
 }
 
-func bytesEmitter(lrw *loggedResponseWriter, _ *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(fmt.Sprintf("%d", lrw.responseBytes)))
+func bytesEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(strconv.FormatInt(lrw.responseBytes, 10))
 }
 
-func clientEmitter(_ *loggedResponseWriter, r *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(r.RemoteAddr))
+func clientEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(r.RemoteAddr)
 }
 
-func clientIPEmitter(_ *loggedResponseWriter, r *http.Request, iow io.Writer) (int, error) {
+func clientIPEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
 	value := r.RemoteAddr // ip:port
 	if colon := strings.LastIndex(value, ":"); colon != -1 {
 		value = value[:colon]
 	}
-	return iow.Write([]byte(value))
+	bb.WriteString(value)
 }
 
-func clientPortEmitter(_ *loggedResponseWriter, r *http.Request, iow io.Writer) (int, error) {
+func clientPortEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
 	value := r.RemoteAddr // ip:port
 	if colon := strings.LastIndex(value, ":"); colon != -1 {
 		value = value[colon+1:]
 	}
-	return iow.Write([]byte(value))
+	bb.WriteString(value)
 }
 
-func durationEmitter(lrw *loggedResponseWriter, _ *http.Request, iow io.Writer) (int, error) {
+func durationEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
 	// 6 decimal places: microsecond precision
-	return iow.Write([]byte(strconv.FormatFloat(lrw.end.Sub(lrw.begin).Seconds(), 'f', 6, 64)))
+	bb.WriteString(strconv.FormatFloat(lrw.end.Sub(lrw.begin).Seconds(), 'f', 6, 64))
 }
 
-func endEmitter(lrw *loggedResponseWriter, _ *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(lrw.end.UTC().Format(apacheTimeFormat)))
+func endEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(lrw.end.UTC().Format(apacheTimeFormat))
 }
 
-func endEpochEmitter(lrw *loggedResponseWriter, _ *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(strconv.FormatInt(lrw.end.UTC().Unix(), 10)))
+func endEpochEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(strconv.FormatInt(lrw.end.UTC().Unix(), 10))
 }
 
-func endISO8601Emitter(lrw *loggedResponseWriter, _ *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(lrw.end.UTC().Format(time.RFC3339)))
+func endISO8601Emitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(lrw.end.UTC().Format(time.RFC3339))
 }
 
-func methodEmitter(_ *loggedResponseWriter, r *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(r.Method))
+func methodEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(r.Method)
 }
 
-func protoEmitter(_ *loggedResponseWriter, r *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(r.Proto))
+func protoEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(r.Proto)
 }
 
-func statusEmitter(lrw *loggedResponseWriter, _ *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(strconv.FormatInt(int64(lrw.status), 10)))
+func statusEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(strconv.FormatInt(int64(lrw.status), 10))
 }
 
-func uriEmitter(_ *loggedResponseWriter, r *http.Request, iow io.Writer) (int, error) {
-	return iow.Write([]byte(r.RequestURI))
+func uriEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(r.RequestURI)
 }
 
-func makeHeaderEmitter(headerName string) func(*loggedResponseWriter, *http.Request, io.Writer) (int, error) {
-	return func(_ *loggedResponseWriter, r *http.Request, iow io.Writer) (int, error) {
-		return iow.Write([]byte(r.Header.Get(headerName)))
+func makeHeaderEmitter(headerName string) func(*loggedResponseWriter, *http.Request, *bytes.Buffer) {
+	return func(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+		bb.WriteString(r.Header.Get(headerName))
 	}
 }

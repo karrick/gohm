@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -46,7 +47,12 @@ func clf(r *http.Request, lrw *loggedResponseWriter, out io.Writer) {
 	request := fmt.Sprintf("%s %s %s", r.Method, r.RequestURI, r.Proto)
 	duration := lrw.end.Sub(lrw.begin).Seconds()
 	formattedTime := lrw.end.UTC().Format(apacheTimeFormat)
-	fmt.Fprintf(out, apacheLogFormat, clientIP, formattedTime, request, lrw.status, lrw.responseBytes, duration)
+
+	line := []byte(fmt.Sprintf(apacheLogFormat, clientIP, formattedTime, request, lrw.status, lrw.responseBytes, duration))
+	if _, err := out.Write(line); err != nil {
+		// if we cannot write to out for some reason, write it to stderr
+		_, _ = os.Stderr.Write(line)
+	}
 }
 
 // LogAll returns a new http.Handler that logs HTTP requests and responses in common log format
@@ -129,9 +135,8 @@ func LogStatusBitmask(bitmask *uint32, out io.Writer, next http.Handler) http.Ha
 		case 5:
 			bit = 16
 		}
-		bm := atomic.LoadUint32(bitmask)
 
-		if bit == 0 || bm&bit > 0 {
+		if bit == 0 || (atomic.LoadUint32(bitmask))&bit > 0 {
 			lrw.end = time.Now()
 			clf(r, lrw, out)
 		}
