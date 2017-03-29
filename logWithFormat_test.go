@@ -201,7 +201,7 @@ func TestWithFormatDynamic(t *testing.T) {
 	}
 }
 
-func BenchmarkLogCustom(b *testing.B) {
+func BenchmarkWithCustomFormatter(b *testing.B) {
 	format := "{client-ip} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
 	logBitmask := uint32(1 | 2 | 4 | 8 | 16)
 	logOutput := new(bytes.Buffer)

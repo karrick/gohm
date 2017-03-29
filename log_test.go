@@ -178,7 +178,7 @@ func TestLogErrorsError(t *testing.T) {
 	}
 }
 
-func BenchmarkLogNone(b *testing.B) {
+func BenchmarkWithoutLogger(b *testing.B) {
 	logOutput := new(bytes.Buffer)
 
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
@@ -191,11 +191,13 @@ func BenchmarkLogNone(b *testing.B) {
 	}
 }
 
-func BenchmarkLogElided(b *testing.B) {
-	logBitmask := uint32(8 | 16) // only errors
+func BenchmarkNothingLogged(b *testing.B) {
+	logBitmask := uint32(gohm.LogStatus4xx | gohm.LogStatus5xx) // only errors
 	logOutput := new(bytes.Buffer)
 
-	handler := gohm.LogStatusBitmask(&logBitmask, logOutput, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	handler := gohm.LogStatusBitmask(&logBitmask, logOutput, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// this does not error, so nothing ought to be logged
+	}))
 
 	for i := 0; i < b.N; i++ {
 		req := httptest.NewRequest("GET", "/some/url", nil)
@@ -205,8 +207,8 @@ func BenchmarkLogElided(b *testing.B) {
 	}
 }
 
-func BenchmarkLogCommonFormatter(b *testing.B) {
-	logBitmask := uint32(1 | 2 | 4 | 8 | 16)
+func BenchmarkWithCommonFormatter(b *testing.B) {
+	logBitmask := uint32(gohm.LogStatus1xx | gohm.LogStatus2xx | gohm.LogStatus3xx | gohm.LogStatus4xx | gohm.LogStatus5xx)
 	logOutput := new(bytes.Buffer)
 
 	handler := gohm.LogStatusBitmask(&logBitmask, logOutput, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
