@@ -21,7 +21,7 @@ func (g gzipResponseWriter) Write(b []byte) (int, error) {
 // "gzip".
 //
 // 	mux := http.NewServeMux()
-// 	mux.Handle("/example/path", gohm.WithGzip(decodeURI(expand(querier))))
+// 	mux.Handle("/example/path", gohm.WithGzip(someHandler))
 func WithGzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {

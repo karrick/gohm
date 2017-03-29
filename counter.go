@@ -20,7 +20,7 @@ func (r *counterHandler) WriteHeader(status int) {
 //
 //	var counterAll = expvar.NewInt("counterAll")
 //	mux := http.NewServeMux()
-//	mux.Handle("/example/path", gohm.StatusAllCounter(counterAll, decodeURI(expand(querier))))
+//	mux.Handle("/example/path", gohm.StatusAllCounter(counterAll, someHandler))
 func StatusAllCounter(counter *expvar.Int, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch := &counterHandler{ResponseWriter: w}
@@ -34,7 +34,7 @@ func StatusAllCounter(counter *expvar.Int, next http.Handler) http.Handler {
 //
 //	var counter1xx = expvar.NewInt("counter1xx")
 //	mux := http.NewServeMux()
-//	mux.Handle("/example/path", gohm.Status1xxCounter(counter1xx, decodeURI(expand(querier))))
+//	mux.Handle("/example/path", gohm.Status1xxCounter(counter1xx, someHandler))
 func Status1xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch := &counterHandler{ResponseWriter: w}
@@ -50,7 +50,7 @@ func Status1xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 //
 //	var counter2xx = expvar.NewInt("counter2xx")
 //	mux := http.NewServeMux()
-//	mux.Handle("/example/path", gohm.Status2xxCounter(counter2xx, decodeURI(expand(querier))))
+//	mux.Handle("/example/path", gohm.Status2xxCounter(counter2xx, someHandler))
 func Status2xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch := &counterHandler{ResponseWriter: w}
@@ -68,7 +68,7 @@ func Status2xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 //
 //	var counter3xx = expvar.NewInt("counter3xx")
 //	mux := http.NewServeMux()
-//	mux.Handle("/example/path", gohm.Status3xxCounter(counter3xx, decodeURI(expand(querier))))
+//	mux.Handle("/example/path", gohm.Status3xxCounter(counter3xx, someHandler))
 func Status3xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch := &counterHandler{ResponseWriter: w}
@@ -84,7 +84,7 @@ func Status3xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 //
 //	var counter4xx = expvar.NewInt("counter4xx")
 //	mux := http.NewServeMux()
-//	mux.Handle("/example/path", gohm.Status4xxCounter(counter4xx, decodeURI(expand(querier))))
+//	mux.Handle("/example/path", gohm.Status4xxCounter(counter4xx, someHandler))
 func Status4xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch := &counterHandler{ResponseWriter: w}
@@ -100,7 +100,7 @@ func Status4xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 //
 //	var counter5xx = expvar.NewInt("counter5xx")
 //	mux := http.NewServeMux()
-//	mux.Handle("/example/path", gohm.Status5xxCounter(counter5xx, decodeURI(expand(querier))))
+//	mux.Handle("/example/path", gohm.Status5xxCounter(counter5xx, someHandler))
 func Status5xxCounter(counter *expvar.Int, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch := &counterHandler{ResponseWriter: w}

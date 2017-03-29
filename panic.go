@@ -9,7 +9,7 @@ import (
 // the specified http.Handler, and responds with an appropriate http status code and message.
 //
 // 	mux := http.NewServeMux()
-// 	mux.Handle("/example/path", gohm.ConvertPanicsToErrors(onlyGet(decodeURI(expand(querier)))))
+// 	mux.Handle("/example/path", gohm.ConvertPanicsToErrors(onlyGet(someHandler)))
 //
 // *NOTE:* When both the WithTimeout and the ConvertPanicsToErrors are used, the WithTimeout ought
 // to wrap the ConvertPanicsToErrors.  This is because timeout handlers in Go are generally

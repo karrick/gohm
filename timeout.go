@@ -9,7 +9,7 @@ import (
 // the specified timeout set via context.
 //
 // 	mux := http.NewServeMux()
-// 	mux.Handle("/example/path", gohm.WithTimeout(30 * time.Second, onlyGet(decodeURI(expand(querier)))))
+// 	mux.Handle("/example/path", gohm.WithTimeout(30 * time.Second, onlyGet(someHandler)))
 //
 // *NOTE:* When both the WithTimeout and the ConvertPanicsToErrors are used, the WithTimeout ought
 // to wrap the ConvertPanicsToErrors.  This is because timeout handlers in Go are generally

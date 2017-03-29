@@ -1,16 +1,17 @@
 package gohm
 
 import (
-	"fmt"
+	"bytes"
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 )
 
-const apacheLogFormat = "%s [%s] \"%s\" %d %d %f\n"
+const apacheLogFormat = "{CLIENT} - [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
 const apacheTimeFormat = "02/Jan/2006:15:04:05 MST"
 
 const (
@@ -39,40 +40,14 @@ func (r *loggedResponseWriter) WriteHeader(status int) {
 	r.ResponseWriter.WriteHeader(status)
 }
 
-func clf(r *http.Request, lrw *loggedResponseWriter, out io.Writer) {
-	clientIP := r.RemoteAddr
-	if colon := strings.LastIndex(clientIP, ":"); colon != -1 {
-		clientIP = clientIP[:colon]
-	}
-	request := fmt.Sprintf("%s %s %s", r.Method, r.RequestURI, r.Proto)
-	duration := lrw.end.Sub(lrw.begin).Seconds()
-	formattedTime := lrw.end.UTC().Format(apacheTimeFormat)
-
-	line := []byte(fmt.Sprintf(apacheLogFormat, clientIP, formattedTime, request, lrw.status, lrw.responseBytes, duration))
-	if _, err := out.Write(line); err != nil {
-		// if we cannot write to out for some reason, write it to stderr
-		_, _ = os.Stderr.Write(line)
-	}
-}
-
 // LogAll returns a new http.Handler that logs HTTP requests and responses in common log format
 // to the specified io.Writer.
 //
 // 	mux := http.NewServeMux()
-// 	mux.Handle("/example/path", gohm.LogAll(os.Stderr, decodeURI(expand(querier))))
+// 	mux.Handle("/example/path", gohm.LogAll(os.Stderr, someHandler))
 func LogAll(out io.Writer, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		lrw := &loggedResponseWriter{
-			ResponseWriter: w,
-			status:         http.StatusOK,
-			begin:          time.Now(),
-		}
-
-		next.ServeHTTP(lrw, r)
-
-		lrw.end = time.Now()
-		clf(r, lrw, out)
-	})
+	logBitmask := uint32(LogStatus1xx | LogStatus2xx | LogStatus3xx | LogStatus4xx | LogStatus5xx)
+	return LogStatusBitmaskWithFormat(apacheLogFormat, &logBitmask, out, next)
 }
 
 // LogErrors returns a new http.Handler that logs HTTP requests that result in response errors, or
@@ -80,22 +55,10 @@ func LogAll(out io.Writer, next http.Handler) http.Handler {
 // in common log format to the specified io.Writer.
 //
 // 	mux := http.NewServeMux()
-// 	mux.Handle("/example/path", gohm.LogErrors(os.Stderr, decodeURI(expand(querier))))
+// 	mux.Handle("/example/path", gohm.LogErrors(os.Stderr, someHandler))
 func LogErrors(out io.Writer, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		lrw := &loggedResponseWriter{
-			ResponseWriter: w,
-			status:         http.StatusOK,
-			begin:          time.Now(),
-		}
-
-		next.ServeHTTP(lrw, r)
-
-		if group := lrw.status / 100; group == 4 || group == 5 {
-			lrw.end = time.Now()
-			clf(r, lrw, out)
-		}
-	})
+	logBitmask := uint32(LogStatus4xx | LogStatus5xx)
+	return LogStatusBitmaskWithFormat(apacheLogFormat, &logBitmask, out, next)
 }
 
 // LogStatusBitmask returns a new http.Handler that logs HTTP requests that have a status code that
@@ -111,8 +74,48 @@ func LogErrors(out io.Writer, next http.Handler) http.Handler {
 //
 // 	mux := http.NewServeMux()
 // 	logBitmask := uint32(gohm.LogStatus4xx|gohm.LogStatus5xx)
-// 	mux.Handle("/example/path", gohm.LogStatusBitmask(&logBitmask, os.Stderr, decodeURI(expand(querier))))
+// 	mux.Handle("/example/path", gohm.LogStatusBitmask(&logBitmask, os.Stderr, someHandler))
 func LogStatusBitmask(bitmask *uint32, out io.Writer, next http.Handler) http.Handler {
+	return LogStatusBitmaskWithFormat(apacheLogFormat, bitmask, out, next)
+}
+
+// LogStatusBitmaskWithFormat returns a new http.Handler that logs HTTP requests that have a status
+// code that matches any of the status codes in the specified bitmask.  The handler will output
+// lines in the specified log format string to the specified io.Writer.
+//
+// The following format directives are supported:
+//
+// 	begin:           time request received (apache log time format)
+// 	begin-epoch:     time request received (epoch)
+// 	begin-iso8601:   time request received (ISO-8601 time format)
+// 	bytes:           response size
+// 	client:          client-ip:client-port
+// 	client-ip:       client IP address
+// 	client-port:     client port
+// 	duration:        duration of request from begin to end, (seconds with millisecond precision)
+// 	end:             time request completed (apache log time format)
+// 	end-epoch:       time request completed (epoch)
+// 	end-iso8601:     time request completed (ISO-8601 time format)
+// 	method:          request method, e.g., GET or POST
+// 	proto:           request protocol, e.g., HTTP/1.1
+// 	status:          response status code
+// 	uri:             request URI
+//
+// In addition, values from HTTP request headers can also be included in the log by prefixing the
+// HTTP header name with "http-", as shown below:
+//
+//      format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+//
+// The closed over `bitmask` parameter is used to specify which HTTP requests ought to be logged
+// based on the service's HTTP status code for each request.
+//
+// 	mux := http.NewServeMux()
+//      format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+// 	logBitmask := uint32(gohm.LogStatus4xx|gohm.LogStatus5xx)
+// 	mux.Handle("/example/path", gohm.LogStatusBitmaskWithFormat(format, &logBitmask, os.Stderr, decodeURI(expand(querier))))
+func LogStatusBitmaskWithFormat(format string, bitmask *uint32, out io.Writer, next http.Handler) http.Handler {
+	emitters := compileFormat(format)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		lrw := &loggedResponseWriter{
 			ResponseWriter: w,
@@ -138,7 +141,199 @@ func LogStatusBitmask(bitmask *uint32, out io.Writer, next http.Handler) http.Ha
 
 		if bit == 0 || (atomic.LoadUint32(bitmask))&bit > 0 {
 			lrw.end = time.Now()
-			clf(r, lrw, out)
+			buf := new(bytes.Buffer)
+			for _, emitter := range emitters {
+				emitter(lrw, r, buf)
+			}
+			if _, err := out.Write(buf.Bytes()); err != nil {
+				// if we cannot write to out for some reason, write it to stderr
+				_, _ = buf.WriteTo(os.Stderr)
+			}
 		}
 	})
+}
+
+func compileFormat(format string) []func(*loggedResponseWriter, *http.Request, *bytes.Buffer) {
+	// build slice of emitter functions, each will emit the requested information into the output
+	var emitters []func(*loggedResponseWriter, *http.Request, *bytes.Buffer)
+
+	// state machine alternating between two states: either capturing runes for the next
+	// constant buffer, or capturing runes for the next token
+	var buf, token bytes.Buffer
+	var capturingToken bool
+
+	var nextRuneEscaped bool // true when next rune has been escaped
+
+	for _, rune := range format {
+		if nextRuneEscaped {
+			// when this rune has been escaped, then just write it out to whichever
+			// buffer we're collecting to right now
+			if capturingToken {
+				token.WriteRune(rune)
+			} else {
+				buf.WriteRune(rune)
+			}
+			nextRuneEscaped = false
+			continue
+		}
+		if rune == '\\' {
+			// format specifies that next rune ought to be escaped
+			nextRuneEscaped = true
+			continue
+		}
+		if rune == '{' {
+			// stop capturing buf, and start capturing token
+			if capturingToken {
+				// is this an error? it was not before
+			}
+			emitters = append(emitters, makeStringEmitter(buf.String()))
+			buf.Reset()
+			capturingToken = true
+		} else if rune == '}' {
+			// stop capturing token, and start capturing buffer
+			if !capturingToken {
+				// is this an error?
+			}
+			switch tok := token.String(); tok {
+			case "begin":
+				emitters = append(emitters, beginEmitter)
+			case "begin-epoch":
+				emitters = append(emitters, beginEpochEmitter)
+			case "begin-iso8601":
+				emitters = append(emitters, beginISO8601Emitter)
+			case "bytes":
+				emitters = append(emitters, bytesEmitter)
+			case "client":
+				emitters = append(emitters, clientEmitter)
+			case "client-ip":
+				emitters = append(emitters, clientIPEmitter)
+			case "client-port":
+				emitters = append(emitters, clientPortEmitter)
+			case "duration":
+				emitters = append(emitters, durationEmitter)
+			case "end":
+				emitters = append(emitters, endEmitter)
+			case "end-epoch":
+				emitters = append(emitters, endEpochEmitter)
+			case "end-iso8601":
+				emitters = append(emitters, endISO8601Emitter)
+			case "method":
+				emitters = append(emitters, methodEmitter)
+			case "proto":
+				emitters = append(emitters, protoEmitter)
+			case "status":
+				emitters = append(emitters, statusEmitter)
+			case "uri":
+				emitters = append(emitters, uriEmitter)
+			default:
+				if strings.HasPrefix(tok, "http-") {
+					// emit value of specified HTTP request header
+					emitters = append(emitters, makeHeaderEmitter(tok[5:]))
+				} else {
+					// unknown token, so just append to buf
+					buf.WriteRune('{')
+					buf.WriteString(tok)
+					buf.WriteRune(rune)
+				}
+			}
+			token.Reset()
+			capturingToken = false
+		} else {
+			// emit to either token or buffer
+			if capturingToken {
+				token.WriteRune(rune)
+			} else {
+				buf.WriteRune(rune)
+			}
+		}
+	}
+	if capturingToken {
+		buf.WriteRune('{')
+		buf.Write(token.Bytes())
+	}
+	buf.WriteRune('\n')
+	emitters = append(emitters, makeStringEmitter(buf.String()))
+
+	return emitters
+}
+
+func makeStringEmitter(value string) func(*loggedResponseWriter, *http.Request, *bytes.Buffer) {
+	return func(_ *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+		bb.WriteString(value)
+	}
+}
+
+func beginEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(lrw.begin.UTC().Format(apacheTimeFormat))
+}
+
+func beginEpochEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(strconv.FormatInt(lrw.begin.UTC().Unix(), 10))
+}
+
+func beginISO8601Emitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(lrw.begin.UTC().Format(time.RFC3339))
+}
+
+func bytesEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(strconv.FormatInt(lrw.responseBytes, 10))
+}
+
+func clientEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(r.RemoteAddr)
+}
+
+func clientIPEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+	value := r.RemoteAddr // ip:port
+	if colon := strings.LastIndex(value, ":"); colon != -1 {
+		value = value[:colon]
+	}
+	bb.WriteString(value)
+}
+
+func clientPortEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+	value := r.RemoteAddr // ip:port
+	if colon := strings.LastIndex(value, ":"); colon != -1 {
+		value = value[colon+1:]
+	}
+	bb.WriteString(value)
+}
+
+func durationEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	// 6 decimal places: microsecond precision
+	bb.WriteString(strconv.FormatFloat(lrw.end.Sub(lrw.begin).Seconds(), 'f', 6, 64))
+}
+
+func endEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(lrw.end.UTC().Format(apacheTimeFormat))
+}
+
+func endEpochEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(strconv.FormatInt(lrw.end.UTC().Unix(), 10))
+}
+
+func endISO8601Emitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(lrw.end.UTC().Format(time.RFC3339))
+}
+
+func methodEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(r.Method)
+}
+
+func protoEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(r.Proto)
+}
+
+func statusEmitter(lrw *loggedResponseWriter, _ *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(strconv.FormatInt(int64(lrw.status), 10))
+}
+
+func uriEmitter(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+	bb.WriteString(r.RequestURI)
+}
+
+func makeHeaderEmitter(headerName string) func(*loggedResponseWriter, *http.Request, *bytes.Buffer) {
+	return func(_ *loggedResponseWriter, r *http.Request, bb *bytes.Buffer) {
+		bb.WriteString(r.Header.Get(headerName))
+	}
 }
