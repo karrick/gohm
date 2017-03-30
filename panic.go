@@ -12,9 +12,10 @@ import (
 // 	mux.Handle("/example/path", gohm.ConvertPanicsToErrors(onlyGet(someHandler)))
 //
 // *NOTE:* When both the WithTimeout and the ConvertPanicsToErrors are used, the WithTimeout ought
-// to wrap the ConvertPanicsToErrors.  This is because timeout handlers in Go are generally
-// implemented using a separate go routine, and the panic could occur in an alternate go routine and
-// not get caught by the ConvertPanicsToErrors.
+// to wrap the ConvertPanicsToErrors.  This is because WithTimeout does not itself implement the
+// timeout, but requests the net/http library to do so, which implements timeout handling using a
+// separate go routine.  When a panic occurs in a separate go routine it will not get caught by
+// ConvertPanicsToErrors.
 func ConvertPanicsToErrors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {

@@ -15,35 +15,32 @@ webservice.
 Here is a simple example:
 
 ```Go
-    var (
-        globalTimeout = 10 * time.Second
-        status1xxCounter *expvar.Int
-        // and so on
-    )
-
-    func init() {
-        status1xxCount = expvar.NewInt()
-        // and so on
-    }
-
-    func main() {
+	var (
+	    globalTimeout = 10 * time.Second
+	    status1xxCounter *expvar.Int
+	    // and so on
+	)
+	
+	func init() {
+	    status1xxCount = expvar.NewInt()
+	    // and so on
+	}
+	
+	func main() {
+	    var counters gohm.Counters
+	
 	    var h http.Handler = http.NewServeMux()
 		h = gohm.WithGzip(h)
 		h = gohm.ConvertPanicsToErrors(h)
 		h = gohm.WithTimeout(10 * time.Second, h)
-		h = gohm.Status1xxCounter(status1xxCounter, h)
-		h = gohm.Status2xxCounter(status2xxCounter, h)
-		h = gohm.Status3xxCounter(status3xxCounter, h)
-		h = gohm.Status4xxCounter(status4xxCounter, h)
-		h = gohm.Status5xxCounter(status5xxCounter, h)
-		h = gohm.StatusAllCounter(statusAllCounter, h)
+		h = gohm.StatusCounters(&counters, h)
 	
 	    format := "{http-CLIENT-IP} {client-ip} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
 	    logBitmask := uint32(gohm.LogStatus4xx|gohm.LogStatus5xx)
 		h = gohm.LogStatusBitmaskPreCompile(format, &globalLogBitmask, logs, h)
 	
 	    mux.Handle("/static/", h)
-    }
+	}
 ```
 
 *NOTE:* When both the `WithTimeout` and the `ConvertPanicsToErrors` are used, the `WithTimeout`
@@ -56,8 +53,8 @@ separate go routine.  When a panic occurs in a separate go routine it will not g
 
 ### ConvertPanicsToErrors
 
-ConvertPanicsToErrors returns a new http.Handler that catches all panics that may be caused by
-the specified http.Handler, and responds with an appropriate http status code and message.
+`ConvertPanicsToErrors` returns a new `http.Handler` that catches all panics that may be caused by
+the specified `http.Handler`, and responds with an appropriate HTTP status code and message.
 
 *NOTE:* When both the `WithTimeout` and the `ConvertPanicsToErrors` are used, the `WithTimeout`
 ought to wrap the `ConvertPanicsToErrors`.  This is because `WithTimeout` does not itself implement
@@ -72,7 +69,7 @@ separate go routine.  When a panic occurs in a separate go routine it will not g
 
 ### Error helper function
 
-Error formats and emits the specified error message text and status code information to the
+`Error` formats and emits the specified error message text and status code information to the
 `http.ResponseWriter`, to be consumed by the client of the service.  This particular helper function
 has nothing to do with emitting log messages on the server side, and only creates a response for the
 client.  Typically handlers will call this method prior to invoking return to return to whichever
@@ -116,16 +113,16 @@ common log format to the specified `io.Writer`.
 
 ### LogStatusBitmask
 
-`LogStatusBitmask` returns a new http.Handler that logs HTTP requests that have a status code that
+`LogStatusBitmask` returns a new `http.Handler` that logs HTTP requests that have a status code that
 matches any of the status codes in the specified bitmask.  The handler will output lines in common
-log format to the specified io.Writer.
+log format to the specified `io.Writer`.
 
-The closed over `bitmask` parameter is used to specify which HTTP requests ought to be logged based
-on the service's HTTP status code for each request.
+The `bitmask` parameter is used to specify which HTTP requests ought to be logged based on the HTTP
+status code returned by the next `http.Handler`.
 
 The default log format line is:
 
-     "{client-ip} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+     "{client-ip} - [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
 
 ```Go
 	mux := http.NewServeMux()
@@ -135,9 +132,9 @@ The default log format line is:
 
 ### LogStatusBitmaskWithFormat
 
-`LogStatusBitmaskWithFormat` returns a new http.Handler that logs HTTP requests that have a status
+`LogStatusBitmaskWithFormat` returns a new `http.Handler` that logs HTTP requests that have a status
 code that matches any of the status codes in the specified bitmask.  The handler will output lines
-in the specified log format string to the specified io.Writer.
+in the specified log format string to the specified `io.Writer`.
 
 The following format directives are supported:
 
@@ -158,12 +155,13 @@ The following format directives are supported:
 	uri:             request URI
 
 In addition, values from HTTP request headers can also be included in the log by prefixing the HTTP
-header name with "http-", as shown below:
+header name with `http-`.  In the below example, each log line will start with the value of the HTTP
+request header `CLIENT-IP`:
 
      format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
 
-The closed over `bitmask` parameter is used to specify which HTTP requests ought to be logged based
-on the service's HTTP status code for each request.
+The `bitmask` parameter is used to specify which HTTP requests ought to be logged based on the HTTP
+status code returned by the next `http.Handler`.
 
 ```Go
 	mux := http.NewServeMux()
@@ -172,70 +170,17 @@ on the service's HTTP status code for each request.
 	mux.Handle("/example/path", gohm.LogStatusBitmaskWithFormat(format, &logBitmask, os.Stderr, someHandler))
 ```
 
-### Status1xxCounter
+### StatusCounters
 
-`Status1xxCounter` returns a new `http.Handler` that composes the specified next `http.Handler`, and
-increments the specified counter when the response status code is not 1xx.
-
-```Go
-    var counter = expvar.NewInt("counter1xx")
-    mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.Status1xxCounter(counter, someHandler))
-```
-
-### StatusAllCounter
-
-`StatusAllCounter` returns a new `http.Handler` that composes the specified next `http.Handler`, and
-increments the specified counter for every query.
+`StatusCounters` returns a new `http.Handler` that increments the specified `gohm.Counters` for
+every HTTP response based on the status code of the specified `http.Handler`.
 
 ```Go
-    var counter = expvar.NewInt("counterAll")
-    mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.StatusAllCounter(counter, someHandler))
-```
-
-### Status2xxCounter
-
-`Status2xxCounter` returns a new `http.Handler` that composes the specified next `http.Handler`, and
-increments the specified counter when the response status code is not 2xx.
-
-```Go
-    var counter = expvar.NewInt("counter2xx")
-    mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.Status2xxCounter(counter, someHandler))
-```
-
-### Status3xxCounter
-
-`Status3xxCounter` returns a new `http.Handler` that composes the specified next `http.Handler`, and
-increments the specified counter when the response status code is not 3xx.
-
-```Go
-    var counter = expvar.NewInt("counter3xx")
-    mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.Status3xxCounter(counter, someHandler))
-```
-
-### Status4xxCounter
-
-`Status4xxCounter` returns a new `http.Handler` that composes the specified next `http.Handler`, and
-increments the specified counter when the response status code is not 4xx.
-
-```Go
-    var counter = expvar.NewInt("counter4xx")
-    mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.Status4xxCounter(counter, someHandler))
-```
-
-### Status5xxCounter
-
-`Status5xxCounter` returns a new `http.Handler` that composes the specified next `http.Handler`, and
-increments the specified counter when the response status code is not 5xx.
-
-```Go
-    var counter = expvar.NewInt("counter5xx")
-    mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.Status5xxCounter(counter, someHandler))
+	var counters gohm.Counters
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.StatusCounters(&counters, someHandler))
+	// later on...
+	status1xxCounter := counters.Get1xx()
 ```
 
 ### WithGzip

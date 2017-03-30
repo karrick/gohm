@@ -65,12 +65,12 @@ func LogErrors(out io.Writer, next http.Handler) http.Handler {
 // matches any of the status codes in the specified bitmask.  The handler will output lines in
 // common log format to the specified io.Writer.
 //
-// The closed over `bitmask` parameter is used to specify which HTTP requests ought to be logged
-// based on the service's HTTP status code for each request.
+// The bitmask parameter is used to specify which HTTP requests ought to be logged based on the HTTP
+// status code returned by the next http.Handler.
 //
 // The default log format line is:
 //
-//      "{client-ip} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+//      "{client-ip} - [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
 //
 // 	mux := http.NewServeMux()
 // 	logBitmask := uint32(gohm.LogStatus4xx|gohm.LogStatus5xx)
@@ -102,17 +102,18 @@ func LogStatusBitmask(bitmask *uint32, out io.Writer, next http.Handler) http.Ha
 // 	uri:             request URI
 //
 // In addition, values from HTTP request headers can also be included in the log by prefixing the
-// HTTP header name with "http-", as shown below:
+// HTTP header name with http-.  In the below example, each log line will start with the value of
+// the HTTP request header CLIENT-IP:
 //
 //      format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
 //
-// The closed over `bitmask` parameter is used to specify which HTTP requests ought to be logged
-// based on the service's HTTP status code for each request.
+// The bitmask parameter is used to specify which HTTP requests ought to be logged based on the HTTP
+// status code returned by the next http.Handler.
 //
 // 	mux := http.NewServeMux()
-//      format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+// 	format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
 // 	logBitmask := uint32(gohm.LogStatus4xx|gohm.LogStatus5xx)
-// 	mux.Handle("/example/path", gohm.LogStatusBitmaskWithFormat(format, &logBitmask, os.Stderr, decodeURI(expand(querier))))
+// 	mux.Handle("/example/path", gohm.LogStatusBitmaskWithFormat(format, &logBitmask, os.Stderr, someHandler))
 func LogStatusBitmaskWithFormat(format string, bitmask *uint32, out io.Writer, next http.Handler) http.Handler {
 	emitters := compileFormat(format)
 
