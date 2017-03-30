@@ -11,15 +11,28 @@ import (
 	"time"
 )
 
-const apacheLogFormat = "{CLIENT} - [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
-const apacheTimeFormat = "02/Jan/2006:15:04:05 MST"
+// DefaultLogFormat is the default log line format used by this library.
+const DefaultLogFormat = "{client-ip} [{begin-iso8601}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+
+// ApacheCommonLogFormat (CLF) is the default log line format for Apache Web Server.  It is included
+// here for users of this library that would like to easily specify log lines out to be emitted
+// using the Apache Common Log Format (CLR).
+//
+//	"%h %l %u %t \"%r\" %>s %b"
+//	"{remote-hostname} {remote-logname} {remote-user} {begin-time} \"{first-line-of-request}\" {status} {bytes}"
+//	"{remote-ip} - - {begin-time} \"{first-line-of-request}\" {status} {bytes}"
+const ApacheCommonLogFormat = "{client-ip} - - [{begin}] \"{method} {uri} {proto}\" {status} {bytes}"
+
+const apacheTimeFormat = "02/Jan/2006:15:04:05 -0700"
 
 const (
-	LogStatus1xx uint32 = 1  // LogStatus1xx used to log HTTP requests which have a 1xx response
-	LogStatus2xx uint32 = 2  // LogStatus2xx used to log HTTP requests which have a 2xx response
-	LogStatus3xx uint32 = 4  // LogStatus3xx used to log HTTP requests which have a 3xx response
-	LogStatus4xx uint32 = 8  // LogStatus4xx used to log HTTP requests which have a 4xx response
-	LogStatus5xx uint32 = 16 // LogStatus5xx used to log HTTP requests which have a 5xx response
+	LogStatus1xx    uint32 = 1                  // LogStatus1xx used to log HTTP requests which have a 1xx response
+	LogStatus2xx    uint32 = 2                  // LogStatus2xx used to log HTTP requests which have a 2xx response
+	LogStatus3xx    uint32 = 4                  // LogStatus3xx used to log HTTP requests which have a 3xx response
+	LogStatus4xx    uint32 = 8                  // LogStatus4xx used to log HTTP requests which have a 4xx response
+	LogStatus5xx    uint32 = 16                 // LogStatus5xx used to log HTTP requests which have a 5xx response
+	LogStatusAll    uint32 = 1 | 2 | 4 | 8 | 16 // LogStatusAll used to log all HTTP requests
+	LogStatusErrors uint32 = 8 | 16             // LogStatusAll used to log HTTP requests which have 4xx or 5xx response
 )
 
 type loggedResponseWriter struct {
@@ -40,43 +53,39 @@ func (r *loggedResponseWriter) WriteHeader(status int) {
 	r.ResponseWriter.WriteHeader(status)
 }
 
-// LogAll returns a new http.Handler that logs HTTP requests and responses in common log format
-// to the specified io.Writer.
+// LogAll returns a new http.Handler that logs HTTP requests and responses using the
+// gohm.DefaultLogFormat to the specified io.Writer.
 //
-// 	mux := http.NewServeMux()
-// 	mux.Handle("/example/path", gohm.LogAll(os.Stderr, someHandler))
+//	mux := http.NewServeMux()
+//	mux.Handle("/example/path", gohm.LogAll(os.Stderr, someHandler))
 func LogAll(out io.Writer, next http.Handler) http.Handler {
-	logBitmask := uint32(LogStatus1xx | LogStatus2xx | LogStatus3xx | LogStatus4xx | LogStatus5xx)
-	return LogStatusBitmaskWithFormat(apacheLogFormat, &logBitmask, out, next)
+	logBitmask := LogStatusAll
+	return LogStatusBitmaskWithFormat(DefaultLogFormat, &logBitmask, out, next)
 }
 
 // LogErrors returns a new http.Handler that logs HTTP requests that result in response errors, or
 // more specifically, HTTP status codes that are either 4xx or 5xx.  The handler will output lines
-// in common log format to the specified io.Writer.
+// using the gohm.DefaultLogFormat to the specified io.Writer.
 //
-// 	mux := http.NewServeMux()
-// 	mux.Handle("/example/path", gohm.LogErrors(os.Stderr, someHandler))
+//	mux := http.NewServeMux()
+//	mux.Handle("/example/path", gohm.LogErrors(os.Stderr, someHandler))
 func LogErrors(out io.Writer, next http.Handler) http.Handler {
-	logBitmask := uint32(LogStatus4xx | LogStatus5xx)
-	return LogStatusBitmaskWithFormat(apacheLogFormat, &logBitmask, out, next)
+	logBitmask := LogStatusErrors
+	return LogStatusBitmaskWithFormat(DefaultLogFormat, &logBitmask, out, next)
 }
 
 // LogStatusBitmask returns a new http.Handler that logs HTTP requests that have a status code that
-// matches any of the status codes in the specified bitmask.  The handler will output lines in
-// common log format to the specified io.Writer.
+// matches any of the status codes in the specified bitmask.  The handler will output lines using
+// the gohm.DefaultLogFormat to the specified io.Writer.
 //
 // The bitmask parameter is used to specify which HTTP requests ought to be logged based on the HTTP
 // status code returned by the next http.Handler.
 //
-// The default log format line is:
-//
-//      "{client-ip} - [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
-//
-// 	mux := http.NewServeMux()
-// 	logBitmask := uint32(gohm.LogStatus4xx|gohm.LogStatus5xx)
-// 	mux.Handle("/example/path", gohm.LogStatusBitmask(&logBitmask, os.Stderr, someHandler))
+//	mux := http.NewServeMux()
+//	logBitmask := uint32(gohm.LogStatus4xx|gohm.LogStatus5xx)
+//	mux.Handle("/example/path", gohm.LogStatusBitmask(&logBitmask, os.Stderr, someHandler))
 func LogStatusBitmask(bitmask *uint32, out io.Writer, next http.Handler) http.Handler {
-	return LogStatusBitmaskWithFormat(apacheLogFormat, bitmask, out, next)
+	return LogStatusBitmaskWithFormat(DefaultLogFormat, bitmask, out, next)
 }
 
 // LogStatusBitmaskWithFormat returns a new http.Handler that logs HTTP requests that have a status
@@ -85,35 +94,35 @@ func LogStatusBitmask(bitmask *uint32, out io.Writer, next http.Handler) http.Ha
 //
 // The following format directives are supported:
 //
-// 	begin:           time request received (apache log time format)
-// 	begin-epoch:     time request received (epoch)
-// 	begin-iso8601:   time request received (ISO-8601 time format)
-// 	bytes:           response size
-// 	client:          client-ip:client-port
-// 	client-ip:       client IP address
-// 	client-port:     client port
-// 	duration:        duration of request from begin to end, (seconds with millisecond precision)
-// 	end:             time request completed (apache log time format)
-// 	end-epoch:       time request completed (epoch)
-// 	end-iso8601:     time request completed (ISO-8601 time format)
-// 	method:          request method, e.g., GET or POST
-// 	proto:           request protocol, e.g., HTTP/1.1
-// 	status:          response status code
-// 	uri:             request URI
+//	begin:           time request received (apache log time format)
+//	begin-epoch:     time request received (epoch)
+//	begin-iso8601:   time request received (ISO-8601 time format)
+//	bytes:           response size
+//	client:          client-ip:client-port
+//	client-ip:       client IP address
+//	client-port:     client port
+//	duration:        duration of request from begin to end, (seconds with millisecond precision)
+//	end:             time request completed (apache log time format)
+//	end-epoch:       time request completed (epoch)
+//	end-iso8601:     time request completed (ISO-8601 time format)
+//	method:          request method, e.g., GET or POST
+//	proto:           request protocol, e.g., HTTP/1.1
+//	status:          response status code
+//	uri:             request URI
 //
 // In addition, values from HTTP request headers can also be included in the log by prefixing the
-// HTTP header name with http-.  In the below example, each log line will start with the value of
-// the HTTP request header CLIENT-IP:
+// HTTP header name with http-.  In the below example, each log line will begin with the value of
+// the HTTP request header CLIENT-IP followed by the value of the HTTP request header USER:
 //
-//      format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+//	format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
 //
 // The bitmask parameter is used to specify which HTTP requests ought to be logged based on the HTTP
 // status code returned by the next http.Handler.
 //
-// 	mux := http.NewServeMux()
-// 	format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
-// 	logBitmask := uint32(gohm.LogStatus4xx|gohm.LogStatus5xx)
-// 	mux.Handle("/example/path", gohm.LogStatusBitmaskWithFormat(format, &logBitmask, os.Stderr, someHandler))
+//	mux := http.NewServeMux()
+//	format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+//	logBitmask := uint32(gohm.LogStatus4xx|gohm.LogStatus5xx)
+//	mux.Handle("/example/path", gohm.LogStatusBitmaskWithFormat(format, &logBitmask, os.Stderr, someHandler))
 func LogStatusBitmaskWithFormat(format string, bitmask *uint32, out io.Writer, next http.Handler) http.Handler {
 	emitters := compileFormat(format)
 
@@ -183,7 +192,7 @@ func compileFormat(format string) []func(*loggedResponseWriter, *http.Request, *
 			continue
 		}
 		if rune == '{' {
-			// stop capturing buf, and start capturing token
+			// stop capturing buf, and begin capturing token
 			if capturingToken {
 				// is this an error? it was not before
 			}
@@ -191,7 +200,7 @@ func compileFormat(format string) []func(*loggedResponseWriter, *http.Request, *
 			buf.Reset()
 			capturingToken = true
 		} else if rune == '}' {
-			// stop capturing token, and start capturing buffer
+			// stop capturing token, and begin capturing buffer
 			if !capturingToken {
 				// is this an error?
 			}

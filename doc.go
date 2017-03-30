@@ -6,7 +6,7 @@ service written in Go.
 
 One function in particular, gohm.Error, is not used as HTTP middleware, but as a helper for emitting
 a sensible error message back to the HTTP client when the HTTP request could not be fulfilled.  It
-emits a text response starting with the status code, the human friendly status message, followed by
+emits a text response beginning with the status code, the human friendly status message, followed by
 an optional text message.  It is meant to be a drop in replacement for http.Error message, that
 formats the error message in a more conventional way to include the status code and message.
 

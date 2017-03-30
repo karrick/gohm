@@ -11,18 +11,18 @@ import (
 // response for the client.  Typically handlers will call this method prior to invoking return to
 // exit to whichever handler invoked it.
 //
-//     // example function which guards downstream handlers to ensure only HTTP GET method used
-//     // to access resource.
-//     func onlyGet(next http.Handler) http.Handler {
-//		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//			if r.Method != "GET" {
-//				gohm.Error(w, r.Method, http.StatusMethodNotAllowed)
-//				// 405 Method Not Allowed: POST
-//				return
-//			}
-//			next.ServeHTTP(w, r)
-//		})
-//     }
+//	// example function which guards downstream handlers to ensure only HTTP GET method used
+//	// to access resource.
+//	func onlyGet(next http.Handler) http.Handler {
+//			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//				if r.Method != "GET" {
+//					gohm.Error(w, r.Method, http.StatusMethodNotAllowed)
+//					// 405 Method Not Allowed: POST
+//					return
+//				}
+//				next.ServeHTTP(w, r)
+//			})
+//	}
 func Error(w http.ResponseWriter, text string, code int) {
 	fullText := strconv.Itoa(code) + " " + http.StatusText(code)
 	if text != "" {

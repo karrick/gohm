@@ -16,30 +16,30 @@ Here is a simple example:
 
 ```Go
 	var (
-	    globalTimeout = 10 * time.Second
-	    status1xxCounter *expvar.Int
-	    // and so on
+		globalTimeout = 10 * time.Second
+		status1xxCounter *expvar.Int
+		// and so on
 	)
-	
+
 	func init() {
-	    status1xxCount = expvar.NewInt()
-	    // and so on
+		status1xxCount = expvar.NewInt()
+		// and so on
 	}
-	
+
 	func main() {
-	    var counters gohm.Counters
-	
-	    var h http.Handler = http.NewServeMux()
+		var counters gohm.Counters
+
+		var h http.Handler = http.NewServeMux()
 		h = gohm.WithGzip(h)
 		h = gohm.ConvertPanicsToErrors(h)
 		h = gohm.WithTimeout(10 * time.Second, h)
 		h = gohm.StatusCounters(&counters, h)
-	
-	    format := "{http-CLIENT-IP} {client-ip} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
-	    logBitmask := uint32(gohm.LogStatus4xx|gohm.LogStatus5xx)
+
+		format := "{http-CLIENT-IP} {client-ip} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+		logBitmask := gohm.LogStatusErrors
 		h = gohm.LogStatusBitmaskPreCompile(format, &globalLogBitmask, logs, h)
-	
-	    mux.Handle("/static/", h)
+
+		mux.Handle("/static/", h)
 	}
 ```
 
@@ -76,53 +76,49 @@ client.  Typically handlers will call this method prior to invoking return to re
 handler invoked it.
 
 ```Go
-     // example function which guards downstream handlers to ensure only HTTP GET method used to
-     // access resource.
-     func onlyGet(next http.Handler) http.Handler {
-        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-            if r.Method != "GET" {
-                gohm.Error(w, r.Method, http.StatusMethodNotAllowed)
-                // 405 Method Not Allowed: POST
-                return
-            }
-            next.ServeHTTP(w, r)
-        })
-     }
+	// example function which guards downstream handlers to ensure only HTTP GET method used to
+	// access resource.
+	func onlyGet(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != "GET" {
+				gohm.Error(w, r.Method, http.StatusMethodNotAllowed)
+				// 405 Method Not Allowed: POST
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 ```
 
 ### LogAll
 
-`LogAll` returns a new `http.Handler` that logs HTTP requests and responses in common log format to
-the specified `io.Writer`.
+`LogAll` returns a new `http.Handler` that logs HTTP requests and responses using the
+`gohm.DefaultLogFormat` to the specified `io.Writer`.
 
 ```Go
-    mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.LogAll(os.Stderr, someHandler))
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.LogAll(os.Stderr, someHandler))
 ```
 
 ### LogErrors
 
 `LogErrors` returns a new `http.Handler` that logs HTTP requests that result in response errors, or
-more specifically, HTTP status codes that are either 4xx or 5xx.  The handler will output lines in
-common log format to the specified `io.Writer`.
+more specifically, HTTP status codes that are either 4xx or 5xx.  The handler will output lines
+using the `gohm.DefaultLogFormat` to the specified `io.Writer`.
 
 ```Go
-    mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.LogErrors(os.Stderr, someHandler))
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.LogErrors(os.Stderr, someHandler))
 ```
 
 ### LogStatusBitmask
 
 `LogStatusBitmask` returns a new `http.Handler` that logs HTTP requests that have a status code that
-matches any of the status codes in the specified bitmask.  The handler will output lines in common
-log format to the specified `io.Writer`.
+matches any of the status codes in the specified bitmask.  The handler will output lines using the
+`gohm.DefaultLogFormat` to the specified `io.Writer`.
 
 The `bitmask` parameter is used to specify which HTTP requests ought to be logged based on the HTTP
 status code returned by the next `http.Handler`.
-
-The default log format line is:
-
-     "{client-ip} - [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
 
 ```Go
 	mux := http.NewServeMux()
@@ -138,24 +134,24 @@ in the specified log format string to the specified `io.Writer`.
 
 The following format directives are supported:
 
-	begin:           time request received (apache log time format)
 	begin-epoch:     time request received (epoch)
 	begin-iso8601:   time request received (ISO-8601 time format)
+	begin:           time request received (apache log time format)
 	bytes:           response size
-	client:          client-ip:client-port
 	client-ip:       client IP address
 	client-port:     client port
-	duration:        duration of request from begin to end, (seconds with millisecond precision)
-	end:             time request completed (apache log time format)
+	client:          client-ip:client-port
+	duration:        duration of request from beginning to end, (seconds with millisecond precision)
 	end-epoch:       time request completed (epoch)
 	end-iso8601:     time request completed (ISO-8601 time format)
+	end:             time request completed (apache log time format)
 	method:          request method, e.g., GET or POST
 	proto:           request protocol, e.g., HTTP/1.1
 	status:          response status code
 	uri:             request URI
 
 In addition, values from HTTP request headers can also be included in the log by prefixing the HTTP
-header name with `http-`.  In the below example, each log line will start with the value of the HTTP
+header name with `http-`.  In the below example, each log line will begin with the value of the HTTP
 request header `CLIENT-IP`:
 
      format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
@@ -189,8 +185,8 @@ every HTTP response based on the status code of the specified `http.Handler`.
 compression algorithm when the HTTP request's `Accept-Encoding` header includes the string `gzip`.
 
 ```Go
-    mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.WithGzip(someHandler))
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.WithGzip(someHandler))
 ```
 
 ### WithTimeout
@@ -205,6 +201,6 @@ separate go routine.  When a panic occurs in a separate go routine it will not g
 `ConvertPanicsToErrors`.
 
 ```Go
-    mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.WithTimeout(30 * time.Second, onlyGet(someHandler)))
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.WithTimeout(30 * time.Second, onlyGet(someHandler)))
 ```

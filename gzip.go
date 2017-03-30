@@ -19,8 +19,8 @@ func (g gzipResponseWriter) Write(b []byte) (int, error) {
 // WithGzip returns a new http.Handler that optionally compresses the response text using the gzip
 // compression algorithm when the HTTP request's Accept-Encoding header includes the string "gzip".
 //
-// 	mux := http.NewServeMux()
-// 	mux.Handle("/example/path", gohm.WithGzip(someHandler))
+//	mux := http.NewServeMux()
+//	mux.Handle("/example/path", gohm.WithGzip(someHandler))
 func WithGzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {

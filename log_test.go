@@ -224,7 +224,7 @@ func BenchmarkWithCommonFormatter(b *testing.B) {
 	}
 }
 
-const apacheTimeFormat = "02/Jan/2006:15:04:05 MST"
+const apacheTimeFormat = "02/Jan/2006:15:04:05 -0700"
 
 func TestWithFormatStatusEscapedCharacters(t *testing.T) {
 	format := "\\{client-ip\\}"

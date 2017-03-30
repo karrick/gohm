@@ -14,8 +14,8 @@ import (
 // separate go routine.  When a panic occurs in a separate go routine it will not get caught by
 // ConvertPanicsToErrors.
 //
-//     mux := http.NewServeMux()
-//     mux.Handle("/example/path", gohm.WithTimeout(30 * time.Second, onlyGet(someHandler)))
+//	mux := http.NewServeMux()
+//	mux.Handle("/example/path", gohm.WithTimeout(30 * time.Second, onlyGet(someHandler)))
 func WithTimeout(timeout time.Duration, next http.Handler) http.Handler {
 	// Using the timeout handling provided by the standard library.
 	return http.TimeoutHandler(next, timeout, "took too long to process request")

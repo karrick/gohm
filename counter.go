@@ -22,13 +22,13 @@ func (r *counterHandler) WriteHeader(status int) {
 //	var counters gohm.Counters
 //	mux := http.NewServeMux()
 //	mux.Handle("/example/path", gohm.StatusCounters(&counters, someHandler))
-//      // later on...
-//      countOf1xx := counters.Get1xx()
-//      countOf2xx := counters.Get2xx()
-//      countOf3xx := counters.Get3xx()
-//      countOf4xx := counters.Get4xx()
-//      countOf5xx := counters.Get5xx()
-//      countTotal := counters.GetAll()
+//	// later on...
+//	countOf1xx := counters.Get1xx()
+//	countOf2xx := counters.Get2xx()
+//	countOf3xx := counters.Get3xx()
+//	countOf4xx := counters.Get4xx()
+//	countOf5xx := counters.Get5xx()
+//	countTotal := counters.GetAll()
 type Counters struct {
 	counterAll, counter1xx, counter2xx, counter3xx, counter4xx, counter5xx uint64
 }
@@ -105,8 +105,8 @@ func (c Counters) GetAndResetAll() uint64 {
 //	var counters gohm.Counters
 //	mux := http.NewServeMux()
 //	mux.Handle("/example/path", gohm.StatusCounters(&counters, someHandler))
-//      // later on...
-//      status1xxCounter := counters.Get1xx()
+//	// later on...
+//	status1xxCounter := counters.Get1xx()
 func StatusCounters(counters *Counters, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ch := &counterHandler{
