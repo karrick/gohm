@@ -63,6 +63,17 @@ func LogAll(out io.Writer, next http.Handler) http.Handler {
 	return LogStatusBitmaskWithFormat(DefaultLogFormat, &logBitmask, out, next)
 }
 
+// LogAllWithFormat returns a new http.Handler that logs HTTP requests and responses using the
+// specified log format string to the specified io.Writer.
+//
+//	mux := http.NewServeMux()
+//	format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+//	mux.Handle("/example/path", gohm.LogAllWithFormat(format, os.Stderr, someHandler))
+func LogAllWithFormat(format string, out io.Writer, next http.Handler) http.Handler {
+	logBitmask := LogStatusAll
+	return LogStatusBitmaskWithFormat(format, &logBitmask, out, next)
+}
+
 // LogErrors returns a new http.Handler that logs HTTP requests that result in response errors, or
 // more specifically, HTTP status codes that are either 4xx or 5xx.  The handler will output lines
 // using the gohm.DefaultLogFormat to the specified io.Writer.
@@ -72,6 +83,18 @@ func LogAll(out io.Writer, next http.Handler) http.Handler {
 func LogErrors(out io.Writer, next http.Handler) http.Handler {
 	logBitmask := LogStatusErrors
 	return LogStatusBitmaskWithFormat(DefaultLogFormat, &logBitmask, out, next)
+}
+
+// LogErrorsWithFormat returns a new http.Handler that logs HTTP requests that result in response
+// errors, or more specifically, HTTP status codes that are either 4xx or 5xx.  The handler will
+// output lines using the specified log format string to the specified io.Writer.
+//
+//	mux := http.NewServeMux()
+//	format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+//	mux.Handle("/example/path", gohm.LogErrorsWithFormat(format, os.Stderr, someHandler))
+func LogErrorsWithFormat(format string, out io.Writer, next http.Handler) http.Handler {
+	logBitmask := LogStatusErrors
+	return LogStatusBitmaskWithFormat(format, &logBitmask, out, next)
 }
 
 // LogStatusBitmask returns a new http.Handler that logs HTTP requests that have a status code that

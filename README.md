@@ -37,7 +37,7 @@ Here is a simple example:
 
 		format := "{http-CLIENT-IP} {client-ip} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
 		logBitmask := gohm.LogStatusErrors
-		h = gohm.LogStatusBitmaskPreCompile(format, &globalLogBitmask, logs, h)
+		h = gohm.LogStatusBitmaskWithFormat(format, &globalLogBitmask, logs, h)
 
 		mux.Handle("/static/", h)
 	}
@@ -49,25 +49,9 @@ the timeout, but requests the `net/http` library to do so, which implements time
 separate go routine.  When a panic occurs in a separate go routine it will not get caught by
 `ConvertPanicsToErrors`.
 
-## Supported Use Cases
+## Helper Functions
 
-### ConvertPanicsToErrors
-
-`ConvertPanicsToErrors` returns a new `http.Handler` that catches all panics that may be caused by
-the specified `http.Handler`, and responds with an appropriate HTTP status code and message.
-
-*NOTE:* When both the `WithTimeout` and the `ConvertPanicsToErrors` are used, the `WithTimeout`
-ought to wrap the `ConvertPanicsToErrors`.  This is because `WithTimeout` does not itself implement
-the timeout, but requests the `net/http` library to do so, which implements timeout handling using a
-separate go routine.  When a panic occurs in a separate go routine it will not get caught by
-`ConvertPanicsToErrors`.
-
-```Go
-    mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.ConvertPanicsToErrors(onlyGet(someHandler)))
-```
-
-### Error helper function
+### Error
 
 `Error` formats and emits the specified error message text and status code information to the
 `http.ResponseWriter`, to be consumed by the client of the service.  This particular helper function
@@ -90,6 +74,24 @@ handler invoked it.
 	}
 ```
 
+## HTTP Handler Middleware Functions
+
+### ConvertPanicsToErrors
+
+`ConvertPanicsToErrors` returns a new `http.Handler` that catches all panics that may be caused by
+the specified `http.Handler`, and responds with an appropriate HTTP status code and message.
+
+*NOTE:* When both the `WithTimeout` and the `ConvertPanicsToErrors` are used, the `WithTimeout`
+ought to wrap the `ConvertPanicsToErrors`.  This is because `WithTimeout` does not itself implement
+the timeout, but requests the `net/http` library to do so, which implements timeout handling using a
+separate go routine.  When a panic occurs in a separate go routine it will not get caught by
+`ConvertPanicsToErrors`.
+
+```Go
+    mux := http.NewServeMux()
+    mux.Handle("/example/path", gohm.ConvertPanicsToErrors(onlyGet(someHandler)))
+```
+
 ### LogAll
 
 `LogAll` returns a new `http.Handler` that logs HTTP requests and responses using the
@@ -100,11 +102,33 @@ handler invoked it.
 	mux.Handle("/example/path", gohm.LogAll(os.Stderr, someHandler))
 ```
 
+### LogAllWithFormat
+
+`LogAllWithFormat` returns a new `http.Handler` that logs HTTP requests and responses using the
+specified log format string to the specified `io.Writer`.
+
+```Go
+	mux := http.NewServeMux()
+	format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
+	mux.Handle("/example/path", gohm.LogAllWithFormat(format, os.Stderr, someHandler))
+```
+
 ### LogErrors
 
 `LogErrors` returns a new `http.Handler` that logs HTTP requests that result in response errors, or
 more specifically, HTTP status codes that are either 4xx or 5xx.  The handler will output lines
 using the `gohm.DefaultLogFormat` to the specified `io.Writer`.
+
+```Go
+	mux := http.NewServeMux()
+	mux.Handle("/example/path", gohm.LogErrors(os.Stderr, someHandler))
+```
+
+### LogErrorsWithFormat
+
+`LogErrorsWithFormat` returns a new `http.Handler` that logs HTTP requests that result in response
+errors, or more specifically, HTTP status codes that are either 4xx or 5xx.  The handler will output
+lines using the specified log format string to the specified `io.Writer`.
 
 ```Go
 	mux := http.NewServeMux()
