@@ -98,3 +98,15 @@ func TestWithTimeoutWhenPanic(t *testing.T) {
 	}
 
 }
+
+func BenchmarkWithTimeout(b *testing.B) {
+	handler := gohm.WithTimeout(time.Minute, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(rr, req)
+	}
+}
