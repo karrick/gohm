@@ -40,7 +40,6 @@ type loggedResponseWriter struct {
 	responseBytes int64
 	status        int
 	begin, end    time.Time
-	closeNotifyCh <-chan bool
 }
 
 func (r *loggedResponseWriter) Write(p []byte) (int, error) {
@@ -52,27 +51,6 @@ func (r *loggedResponseWriter) Write(p []byte) (int, error) {
 func (r *loggedResponseWriter) WriteHeader(status int) {
 	r.status = status
 	r.ResponseWriter.WriteHeader(status)
-}
-
-func (r *loggedResponseWriter) CloseNotify() <-chan bool {
-	if r.closeNotifyCh != nil {
-		return r.closeNotifyCh
-	}
-	if notifier, ok := r.ResponseWriter.(http.CloseNotifier); ok {
-		r.closeNotifyCh = notifier.CloseNotify()
-	} else {
-		// Return a channel that nothing will ever emit to, and will eventually be garbage
-		// collected.
-		//
-		// NOTE: I am not absolutely certain about the client side-effects of essentially
-		// broadcasting this as a CloseNotifier when it returns a dummy channel.  Well
-		// behaved http.Handler functions will attempt to take advantage of the feature, but
-		// it will sadly not work.  This can happen when a server program inserts a
-		// http.Handler into the pipeline for a call that inserts its own
-		// http.ResponseHandler that does not have the CloseNotify method.
-		r.closeNotifyCh = make(<-chan bool)
-	}
-	return r.closeNotifyCh
 }
 
 // LogAll returns a new http.Handler that logs HTTP requests and responses using the

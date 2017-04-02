@@ -8,34 +8,12 @@ import (
 
 type countingResponseWriter struct {
 	http.ResponseWriter
-	status        int
-	closeNotifyCh <-chan bool
+	status int
 }
 
 func (r *countingResponseWriter) WriteHeader(status int) {
 	r.status = status
 	r.ResponseWriter.WriteHeader(status)
-}
-
-func (r *countingResponseWriter) CloseNotify() <-chan bool {
-	if r.closeNotifyCh != nil {
-		return r.closeNotifyCh
-	}
-	if notifier, ok := r.ResponseWriter.(http.CloseNotifier); ok {
-		r.closeNotifyCh = notifier.CloseNotify()
-	} else {
-		// Return a channel that nothing will ever emit to, and will eventually be garbage
-		// collected.
-		//
-		// NOTE: I am not absolutely certain about the client side-effects of essentially
-		// broadcasting this as a CloseNotifier when it returns a dummy channel.  Well
-		// behaved http.Handler functions will attempt to take advantage of the feature, but
-		// it will sadly not work.  This can happen when a server program inserts a
-		// http.Handler into the pipeline for a call that inserts its own
-		// http.ResponseHandler that does not have the CloseNotify method.
-		r.closeNotifyCh = make(<-chan bool)
-	}
-	return r.closeNotifyCh
 }
 
 // StatusCounters returns a new http.Handler that increments the specified gohm.Counters for every

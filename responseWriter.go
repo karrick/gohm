@@ -12,7 +12,6 @@ type responseWriter struct {
 	header        http.Header
 	body          bytes.Buffer
 	status        int
-	closeNotifyCh <-chan bool
 	statusWritten bool
 }
 

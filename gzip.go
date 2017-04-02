@@ -9,8 +9,7 @@ import (
 
 type gzipResponseWriter struct {
 	http.ResponseWriter
-	gzipWriter    io.Writer
-	closeNotifyCh <-chan bool
+	gzipWriter io.Writer
 }
 
 func (g gzipResponseWriter) Write(b []byte) (int, error) {
@@ -33,25 +32,4 @@ func WithGzip(next http.Handler) http.Handler {
 		w.Header().Set("Content-Encoding", "gzip")
 		next.ServeHTTP(gzipResponseWriter{ResponseWriter: w, gzipWriter: gz}, r)
 	})
-}
-
-func (r *gzipResponseWriter) CloseNotify() <-chan bool {
-	if r.closeNotifyCh != nil {
-		return r.closeNotifyCh
-	}
-	if notifier, ok := r.ResponseWriter.(http.CloseNotifier); ok {
-		r.closeNotifyCh = notifier.CloseNotify()
-	} else {
-		// Return a channel that nothing will ever emit to, and will eventually be garbage
-		// collected.
-		//
-		// NOTE: I am not absolutely certain about the client side-effects of essentially
-		// broadcasting this as a CloseNotifier when it returns a dummy channel.  Well
-		// behaved http.Handler functions will attempt to take advantage of the feature, but
-		// it will sadly not work.  This can happen when a server program inserts a
-		// http.Handler into the pipeline for a call that inserts its own
-		// http.ResponseHandler that does not have the CloseNotify method.
-		r.closeNotifyCh = make(<-chan bool)
-	}
-	return r.closeNotifyCh
 }
