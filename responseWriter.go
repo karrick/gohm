@@ -3,6 +3,7 @@ package gohm
 import (
 	"bytes"
 	"net/http"
+	"time"
 )
 
 // responseWriter must behave exactly like http.responseWriter, yet store up response until after
@@ -13,6 +14,8 @@ type responseWriter struct {
 	body          bytes.Buffer
 	status        int
 	statusWritten bool
+
+	begin, end time.Time
 }
 
 func (rw *responseWriter) Header() http.Header {
