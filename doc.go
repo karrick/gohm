@@ -38,7 +38,7 @@ ServeHTTP(http.ResponseHandler, *http.Request) method.
 
 *NOTE:* When both the WithTimeout and the ConvertPanicsToErrors are used, the WithTimeout ought to
 wrap the ConvertPanicsToErrors.  This is because timeout handlers in Go are generally implemented
-using a separate go routine, and the panic could occur in an alternate go routine and not get caught
+using a separate goroutine, and the panic could occur in an alternate goroutine and not get caught
 by the ConvertPanicsToErrors.
 
 */

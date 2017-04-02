@@ -2,49 +2,41 @@ package gohm
 
 import (
 	"bytes"
-	"fmt"
 	"net/http"
 )
 
 // responseWriter must behave exactly like http.responseWriter, yet store up response until after
 // complete. maybe we provide Flush method to trigger completion.
 type responseWriter struct {
-	wrapped http.ResponseWriter
-	header  http.Header
-	buf     bytes.Buffer
-	status  int
-}
-
-func ResponseWriter(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rw := &responseWriter{
-			wrapped: w,
-			header:  make(http.Header),
-		}
-
-		next.ServeHTTP(rw, r)
-
-		if err := rw.flush(); err != nil {
-			Error(rw, fmt.Sprintf("cannot flush response writer: %s", err), http.StatusInternalServerError)
-		}
-	})
+	http.ResponseWriter
+	header        http.Header
+	body          bytes.Buffer
+	status        int
+	closeNotifyCh <-chan bool
+	statusWritten bool
 }
 
 func (rw *responseWriter) Header() http.Header {
-	return rw.header
+	m := rw.header
+	if m == nil {
+		m = make(http.Header)
+		rw.header = m
+	}
+	return m
 }
 
 func (rw *responseWriter) Write(blob []byte) (int, error) {
-	return rw.buf.Write(blob)
+	return rw.body.Write(blob)
 }
 
 func (rw *responseWriter) WriteHeader(status int) {
 	rw.status = status
+	rw.statusWritten = true
 }
 
 func (rw *responseWriter) flush() error {
 	// write header
-	header := rw.wrapped.Header()
+	header := rw.ResponseWriter.Header()
 	for key, values := range rw.header {
 		for _, value := range values {
 			header.Add(key, value)
@@ -52,9 +44,12 @@ func (rw *responseWriter) flush() error {
 	}
 
 	// write status
-	rw.wrapped.WriteHeader(rw.status)
+	if !rw.statusWritten {
+		rw.status = http.StatusOK
+	}
+	rw.ResponseWriter.WriteHeader(rw.status)
 
 	// write response
-	_, err := rw.buf.WriteTo(rw.wrapped)
+	_, err := rw.body.WriteTo(rw.ResponseWriter)
 	return err
 }
