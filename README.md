@@ -20,7 +20,7 @@ Here is a simple example:
 
 ```Go
 func main() {
-	h := http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
+    h := http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
 
     // gzip response if client accepts gzip encoding
     h = gohm.WithGzip(h)
@@ -28,8 +28,8 @@ func main() {
     // panic & timeout protection, error handling, and logging
     h = gohm.New(h, gohm.Config{Timeout: time.Second})
 
-	http.Handle("/static/", h)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+    http.Handle("/static/", h)
+    log.Fatal(http.ListenAndServe(":8080", nil))
 }
 ```
 
@@ -39,35 +39,35 @@ Here is an example with a few customizations:
 const staticTimeout = time.Second // Used to control how long it takes to serve a static file.
 
 var (
-	// Will store statistics counters for status codes 1xx, 2xx, 3xx, 4xx, 5xx, as well as a
-	// counter for all responses
-	counters gohm.Counters
+    // Will store statistics counters for status codes 1xx, 2xx, 3xx, 4xx, 5xx, as well as a
+    // counter for all responses
+    counters gohm.Counters
 
-	// Used to dynamically control log level of HTTP logging.  After handler created, this must
-	// be accessed using the sync/atomic package.
-	logBitmask = gohm.LogStatusErrors
+    // Used to dynamically control log level of HTTP logging.  After handler created, this must
+    // be accessed using the sync/atomic package.
+    logBitmask = gohm.LogStatusErrors
 
-	// Determines HTTP log format
-	logFormat = "{http-CLIENT-IP} {client-ip} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration} {message}"
+    // Determines HTTP log format
+    logFormat = "{http-CLIENT-IP} {client-ip} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration} {message}"
 )
 
 func main() {
 
-	h := http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
+    h := http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
 
-    h = gohm.WithGzip(h)                   // gzip response if client accepts gzip encoding
+    h = gohm.WithGzip(h) // gzip response if client accepts gzip encoding
 
     // gohm was designed to wrap other http.Handler functions.
     h = gohm.New(h, gohm.Config{
-        Counters:   &counters,             // pointer given so counters can be collected and optionally reset
-        LogBitmask: &logBitmask,           // pointer given so bitmask can be updated using sync/atomic
+        Counters:   &counters,   // pointer given so counters can be collected and optionally reset
+        LogBitmask: &logBitmask, // pointer given so bitmask can be updated using sync/atomic
         LogFormat:  logFormat,
         LogWriter:  os.Stderr,
         Timeout:    staticTimeout,
     })
 
-	http.Handle("/static/", h)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+    http.Handle("/static/", h)
+    log.Fatal(http.ListenAndServe(":8080", nil))
 }
 ```
 
@@ -86,13 +86,13 @@ Similarly, `handlerC` is downstream of `handlerB`, which is likewise downstream 
 
 ```Go
 func example1() {
-	h := handlerA(handlerB(handlerC))
+    h := handlerA(handlerB(handlerC))
 }
 
 func example2() {
-	h := handlerC
-	h = handlerB(h)
-	h = handlerA(h)
+    h := handlerC
+    h = handlerB(h)
+    h = handlerA(h)
 }
 ```
 
@@ -112,14 +112,14 @@ whichever handler invoked it.
 // example function which guards downstream handlers to ensure only HTTP GET method used to
 // access resource.
 func onlyGet(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			gohm.Error(w, r.Method, http.StatusMethodNotAllowed)
-			// 405 Method Not Allowed: POST
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        if r.Method != "GET" {
+            gohm.Error(w, r.Method, http.StatusMethodNotAllowed)
+            // 405 Method Not Allowed: POST
+            return
+        }
+        next.ServeHTTP(w, r)
+    })
 }
 ```
 
@@ -161,23 +161,23 @@ HTTP status code returned by the downstream `http.Handler`.
 The following format directives are supported.  All times provided are converted to UTC before
 formatting.
 
-	begin-epoch:     time request received (epoch)
-	begin-iso8601:   time request received (ISO-8601 time format)
-	begin:           time request received (apache log time format)
-	bytes:           response size
-	client-ip:       client IP address
-	client-port:     client port
-	client:          client-ip:client-port
-	duration:        duration of request from beginning to end, (seconds with millisecond precision)
-	end-epoch:       time request completed (epoch)
-	end-iso8601:     time request completed (ISO-8601 time format)
-	end:             time request completed (apache log time format)
-	error:           context timeout, context closed, or panic error message
-	method:          request method, e.g., GET or POST
-	proto:           request protocol, e.g., HTTP/1.1
-	status:          response status code
-	status-text:     response status text
-	uri:             request URI
+    begin-epoch:     time request received (epoch)
+    begin-iso8601:   time request received (ISO-8601 time format)
+    begin:           time request received (apache log time format)
+    bytes:           response size
+    client-ip:       client IP address
+    client-port:     client port
+    client:          client-ip:client-port
+    duration:        duration of request from beginning to end, (seconds with millisecond precision)
+    end-epoch:       time request completed (epoch)
+    end-iso8601:     time request completed (ISO-8601 time format)
+    end:             time request completed (apache log time format)
+    error:           context timeout, context closed, or panic error message
+    method:          request method, e.g., GET or POST
+    proto:           request protocol, e.g., HTTP/1.1
+    status:          response status code
+    status-text:     response status text
+    uri:             request URI
 
 In addition, values from HTTP request headers can also be included in the log by prefixing the HTTP
 header name with `http-`.  In the below example, each log line will begin with the value of the HTTP
@@ -205,6 +205,6 @@ to return.  It is recommended that a sensible timeout always be chosen for all p
 compression algorithm when the HTTP request's `Accept-Encoding` header includes the string `gzip`.
 
 ```Go
-	mux := http.NewServeMux()
-	mux.Handle("/example/path", gohm.WithGzip(someHandler))
+    mux := http.NewServeMux()
+    mux.Handle("/example/path", gohm.WithGzip(someHandler))
 ```
