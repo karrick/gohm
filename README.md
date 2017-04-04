@@ -181,7 +181,8 @@ formatting.
 
 In addition, values from HTTP request headers can also be included in the log by prefixing the HTTP
 header name with `http-`.  In the below example, each log line will begin with the value of the HTTP
-request header `CLIENT-IP`:
+request header `CLIENT-IP`.  If the specified request header is not present, a hyphen will be used
+in place of the non-existant value.
 
 ```Go
 format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"

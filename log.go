@@ -8,20 +8,20 @@ import (
 	"time"
 )
 
-// DefaultLogFormat is the default log line format used by this library.
-const DefaultLogFormat = "{client-ip} [{begin-iso8601}] \"{method} {uri} {proto}\" {status} {bytes} {duration} {error}"
-
 // ApacheCommonLogFormat (CLF) is the default log line format for Apache Web Server.  It is included
 // here for users of this library that would like to easily specify log lines out to be emitted
 // using the Apache Common Log Format (CLR), by setting `LogFormat` to `gohm.ApackeCommonLogFormat`.
 const ApacheCommonLogFormat = "{client-ip} - - [{begin}] \"{method} {uri} {proto}\" {status} {bytes}"
+
+const apacheTimeFormat = "02/Jan/2006:15:04:05 -0700"
 
 // NOTE: Apache Common Log Format size excludes HTTP headers
 // "%h %l %u %t \"%r\" %>s %b"
 // "{remote-hostname} {remote-logname} {remote-user} {begin-time} \"{first-line-of-request}\" {status} {bytes}"
 // "{remote-ip} - - {begin-time} \"{first-line-of-request}\" {status} {bytes}"
 
-const apacheTimeFormat = "02/Jan/2006:15:04:05 -0700"
+// DefaultLogFormat is the default log line format used by this library.
+const DefaultLogFormat = "{client-ip} [{begin-iso8601}] \"{method} {uri} {proto}\" {status} {bytes} {duration} {error}"
 
 // LogStatus1xx used to log HTTP requests which have a 1xx response
 const LogStatus1xx uint32 = 1
@@ -241,6 +241,10 @@ func uriEmitter(_ *responseWriter, r *http.Request, bb *bytes.Buffer) {
 
 func makeHeaderEmitter(headerName string) func(*responseWriter, *http.Request, *bytes.Buffer) {
 	return func(_ *responseWriter, r *http.Request, bb *bytes.Buffer) {
-		bb.WriteString(r.Header.Get(headerName))
+		value := r.Header.Get(headerName)
+		if value == "" {
+			value = "-"
+		}
+		bb.WriteString(value)
 	}
 }
