@@ -181,7 +181,7 @@ func New(next http.Handler, config Config) http.Handler {
 		case <-ctx.Done():
 			// we'll create a new rw that downstream handler doesn't have access to so it cannot
 			// mutate it.
-			rw = &responseWriter{ResponseWriter: w}
+			rw = &responseWriter{ResponseWriter: w, begin: rw.begin}
 
 			// the context was canceled; where ctx.Err() will say why
 			// 503 (this is what http.TimeoutHandler returns)
