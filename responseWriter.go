@@ -133,7 +133,6 @@ func New(next http.Handler, config Config) http.Handler {
 		rw := &responseWriter{ResponseWriter: w}
 
 		var ctx context.Context
-		var cancel func()
 
 		// Create a couple of channels to detect one of 3 ways to exit this handler.
 		serverCompleted := make(chan struct{})
@@ -144,15 +143,14 @@ func New(next http.Handler, config Config) http.Handler {
 			// invoke the specified cancel function for us after the timeout has
 			// elapsed.  Invoking the cancel function causes the context's Done channel
 			// to close.  Detecting timeout is done by waiting for context.Done() to close.
-			ctx, cancel = context.WithTimeout(r.Context(), config.Timeout)
+			ctx, _ = context.WithTimeout(r.Context(), config.Timeout)
 		} else {
 			// When no timeout given, we still need a mechanism to track context
 			// cancellation so this handler can detect when client has closed its
 			// connection.
-			ctx, cancel = context.WithCancel(r.Context())
+			ctx, _ = context.WithCancel(r.Context())
 		}
 		r = r.WithContext(ctx)
-		defer cancel()
 
 		if config.LogWriter != nil {
 			rw.begin = time.Now()
@@ -181,6 +179,10 @@ func New(next http.Handler, config Config) http.Handler {
 			rw.error(text, http.StatusInternalServerError)
 
 		case <-ctx.Done():
+			// we'll create a new rw that downstream handler doesn't have access to so it cannot
+			// mutate it.
+			rw = &responseWriter{ResponseWriter: w}
+
 			// the context was canceled; where ctx.Err() will say why
 			// 503 (this is what http.TimeoutHandler returns)
 			rw.error(ctx.Err().Error(), http.StatusServiceUnavailable)
