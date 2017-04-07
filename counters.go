@@ -23,66 +23,66 @@ type Counters struct {
 
 // GetAll returns total number of HTTP responses, regardless of status code.
 func (c Counters) GetAll() uint64 {
-	return atomic.LoadUint64(&c.counters[0])
+	return atomic.LoadUint64(&(c.counters[0]))
 }
 
 // Get1xx returns number of HTTP responses resulting in a 1xx status code.
 func (c Counters) Get1xx() uint64 {
-	return atomic.LoadUint64(&c.counters[1])
+	return atomic.LoadUint64(&(c.counters[1]))
 }
 
 // Get2xx returns number of HTTP responses resulting in a 2xx status code.
 func (c Counters) Get2xx() uint64 {
-	return atomic.LoadUint64(&c.counters[2])
+	return atomic.LoadUint64(&(c.counters[2]))
 }
 
 // Get3xx returns number of HTTP responses resulting in a 3xx status code.
 func (c Counters) Get3xx() uint64 {
-	return atomic.LoadUint64(&c.counters[3])
+	return atomic.LoadUint64(&(c.counters[3]))
 }
 
 // Get4xx returns number of HTTP responses resulting in a 4xx status code.
 func (c Counters) Get4xx() uint64 {
-	return atomic.LoadUint64(&c.counters[4])
+	return atomic.LoadUint64(&(c.counters[4]))
 }
 
 // Get5xx returns number of HTTP responses resulting in a 5xx status code.
 func (c Counters) Get5xx() uint64 {
-	return atomic.LoadUint64(&c.counters[5])
+	return atomic.LoadUint64(&(c.counters[5]))
 }
 
 // GetAndResetAll returns number of HTTP responses resulting in a All status code, and resets the
 // counter to 0.
 func (c Counters) GetAndResetAll() uint64 {
-	return atomic.SwapUint64(&c.counters[0], 0)
+	return atomic.SwapUint64(&(c.counters[0]), 0)
 }
 
 // GetAndReset1xx returns number of HTTP responses resulting in a 1xx status code, and resets the
 // counter to 0.
 func (c Counters) GetAndReset1xx() uint64 {
-	return atomic.SwapUint64(&c.counters[1], 0)
+	return atomic.SwapUint64(&(c.counters[1]), 0)
 }
 
 // GetAndReset2xx returns number of HTTP responses resulting in a 2xx status code, and resets the
 // counter to 0.
 func (c Counters) GetAndReset2xx() uint64 {
-	return atomic.SwapUint64(&c.counters[2], 0)
+	return atomic.SwapUint64(&(c.counters[2]), 0)
 }
 
 // GetAndReset3xx returns number of HTTP responses resulting in a 3xx status code, and resets the
 // counter to 0.
 func (c Counters) GetAndReset3xx() uint64 {
-	return atomic.SwapUint64(&c.counters[3], 0)
+	return atomic.SwapUint64(&(c.counters[3]), 0)
 }
 
 // GetAndReset4xx returns number of HTTP responses resulting in a 4xx status code, and resets the
 // counter to 0.
 func (c Counters) GetAndReset4xx() uint64 {
-	return atomic.SwapUint64(&c.counters[4], 0)
+	return atomic.SwapUint64(&(c.counters[4]), 0)
 }
 
 // GetAndReset5xx returns number of HTTP responses resulting in a 5xx status code, and resets the
 // counter to 0.
 func (c Counters) GetAndReset5xx() uint64 {
-	return atomic.SwapUint64(&c.counters[5], 0)
+	return atomic.SwapUint64(&(c.counters[5]), 0)
 }
