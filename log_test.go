@@ -109,7 +109,7 @@ const apacheTimeFormat = "02/Jan/2006:15:04:05 -0700"
 
 func TestLogWithFormatStatusEscapedCharacters(t *testing.T) {
 	format := "\\{client-ip\\}"
-	logBitmask := uint32(gohm.LogStatus1xx | gohm.LogStatus2xx | gohm.LogStatus3xx | gohm.LogStatus4xx | gohm.LogStatus5xx)
+	logBitmask := gohm.LogStatusAll
 	logOutput := new(bytes.Buffer)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +156,7 @@ func TestLogWithFormatStatic(t *testing.T) {
 
 func TestLogWithFormatIgnoresInvalidTokens(t *testing.T) {
 	format := "This is an {invalid-token} with a {status} after it"
-	logBitmask := uint32(gohm.LogStatus1xx | gohm.LogStatus2xx | gohm.LogStatus3xx | gohm.LogStatus4xx | gohm.LogStatus5xx)
+	logBitmask := gohm.LogStatusAll
 	logOutput := new(bytes.Buffer)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -184,21 +184,21 @@ func timeFromEpochString(t *testing.T, value string) time.Time {
 
 func TestLogWithFormatDynamic(t *testing.T) {
 	format := "{begin-epoch} {end-epoch} {begin} {begin-iso8601} {end} {end-iso8601} {duration}"
-	logBitmask := uint32(gohm.LogStatus1xx | gohm.LogStatus2xx | gohm.LogStatus3xx | gohm.LogStatus4xx | gohm.LogStatus5xx)
+	logBitmask := gohm.LogStatusAll
 	logOutput := new(bytes.Buffer)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gohm.Error(w, "some error", http.StatusForbidden)
 	}), gohm.Config{LogBitmask: &logBitmask, LogFormat: format, LogWriter: logOutput})
 
-	beforeTime := time.Now() //.Round(time.Second)
+	beforeTime := time.Now()
 
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/some/url", nil)
 
 	handler.ServeHTTP(rr, req)
 
-	afterTime := time.Now() //.Round(time.Second)
+	afterTime := time.Now()
 
 	// first, grab the begin-epoch, and compute the other begin values
 	actual := logOutput.String()
