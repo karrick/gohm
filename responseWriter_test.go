@@ -15,8 +15,9 @@ import (
 func TestResponseWriter(t *testing.T) {
 	status := http.StatusCreated
 	response := "some response"
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
@@ -28,9 +29,9 @@ func TestResponseWriter(t *testing.T) {
 		w.Write([]byte(response))
 	}), gohm.Config{})
 
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
-	resp := rr.Result()
+	resp := recorder.Result()
 
 	if actual, expected := resp.StatusCode, status; actual != expected {
 		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
@@ -73,16 +74,16 @@ func TestResponseWriter(t *testing.T) {
 }
 
 func TestResponseWriterWhenWriteHeaderErrorStatus(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 	}), gohm.Config{})
 
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
+	handler.ServeHTTP(recorder, request)
 
-	handler.ServeHTTP(rr, req)
-
-	resp := rr.Result()
+	resp := recorder.Result()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -104,9 +105,9 @@ func BenchmarkWithoutResponseWriter(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/some/url", nil)
-		handler.ServeHTTP(rr, req)
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(recorder, request)
 	}
 }
 
@@ -116,9 +117,9 @@ func BenchmarkWithDefaultResponseWriter(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/some/url", nil)
-		handler.ServeHTTP(rr, req)
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(recorder, request)
 	}
 }
 
@@ -134,8 +135,8 @@ func BenchmarkWithFullResponseWriter(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/some/url", nil)
-		handler.ServeHTTP(rr, req)
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(recorder, request)
 	}
 }

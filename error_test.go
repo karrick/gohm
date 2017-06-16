@@ -11,16 +11,16 @@ import (
 
 // when error called, status updated, client receives message
 func TestWhenErrorInvoked(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gohm.Error(w, "some error", http.StatusForbidden)
 	}), gohm.Config{})
 
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
+	handler.ServeHTTP(recorder, request)
 
-	handler.ServeHTTP(rr, req)
-
-	resp := rr.Result()
+	resp := recorder.Result()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)

@@ -12,18 +12,18 @@ import (
 )
 
 func TestBeforeTimeout(t *testing.T) {
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
-
 	response := "{pi:3.14159265}"
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(response))
 	}), gohm.Config{Timeout: time.Second})
 
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
-	resp := rr.Result()
+	resp := recorder.Result()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -39,19 +39,19 @@ func TestBeforeTimeout(t *testing.T) {
 }
 
 func TestAfterTimeout(t *testing.T) {
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
-
 	response := "{pi:3.14159265}"
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(time.Second)
 		w.Write([]byte(response))
 	}), gohm.Config{Timeout: 5 * time.Millisecond})
 
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
-	resp := rr.Result()
+	resp := recorder.Result()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -71,9 +71,11 @@ func BenchmarkWithTimeout(b *testing.B) {
 		// don't bother exceeding timeout
 	}), gohm.Config{Timeout: time.Second})
 
+	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/some/url", nil)
-		handler.ServeHTTP(rr, req)
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(recorder, request)
 	}
 }

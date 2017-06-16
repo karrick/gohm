@@ -9,11 +9,13 @@ import (
 	"github.com/karrick/gohm"
 )
 
-func test(t *testing.T, status int) gohm.Counters {
+func testCounter(t *testing.T, status int) gohm.Counters {
 	var counters gohm.Counters
 	response := "some response"
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if status != http.StatusOK {
 			// To ensure status code set even when next handler does not
@@ -25,9 +27,9 @@ func test(t *testing.T, status int) gohm.Counters {
 		w.Write([]byte(response))
 	}), gohm.Config{Counters: &counters})
 
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
-	resp := rr.Result()
+	resp := recorder.Result()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -46,7 +48,7 @@ func test(t *testing.T, status int) gohm.Counters {
 }
 
 func TestStatusCounters1xx(t *testing.T) {
-	counters := test(t, http.StatusContinue) // 100
+	counters := testCounter(t, http.StatusContinue) // 100
 
 	if actual, expected := counters.Get1xx(), uint64(1); actual != expected {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -66,7 +68,7 @@ func TestStatusCounters1xx(t *testing.T) {
 }
 
 func TestStatusCounters2xxWithoutHandlerWritingStatus(t *testing.T) {
-	counters := test(t, http.StatusOK) // 200
+	counters := testCounter(t, http.StatusOK) // 200
 
 	if actual, expected := counters.Get1xx(), uint64(0); actual != expected {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -86,7 +88,7 @@ func TestStatusCounters2xxWithoutHandlerWritingStatus(t *testing.T) {
 }
 
 func TestStatusCounters2xx(t *testing.T) {
-	counters := test(t, http.StatusCreated) // 201
+	counters := testCounter(t, http.StatusCreated) // 201
 
 	if actual, expected := counters.Get1xx(), uint64(0); actual != expected {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -106,7 +108,7 @@ func TestStatusCounters2xx(t *testing.T) {
 }
 
 func TestStatusCounters3xx(t *testing.T) {
-	counters := test(t, http.StatusFound) // 302
+	counters := testCounter(t, http.StatusFound) // 302
 
 	if actual, expected := counters.Get1xx(), uint64(0); actual != expected {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -126,7 +128,7 @@ func TestStatusCounters3xx(t *testing.T) {
 }
 
 func TestStatusCounters4xx(t *testing.T) {
-	counters := test(t, http.StatusForbidden) // 403
+	counters := testCounter(t, http.StatusForbidden) // 403
 
 	if actual, expected := counters.Get1xx(), uint64(0); actual != expected {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -146,7 +148,7 @@ func TestStatusCounters4xx(t *testing.T) {
 }
 
 func TestStatusCounters5xx(t *testing.T) {
-	counters := test(t, http.StatusGatewayTimeout) // 504
+	counters := testCounter(t, http.StatusGatewayTimeout) // 504
 
 	if actual, expected := counters.Get1xx(), uint64(0); actual != expected {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -172,9 +174,11 @@ func BenchmarkWithCounters(b *testing.B) {
 		w.WriteHeader(http.StatusAccepted)
 	}), gohm.Config{Counters: &counters})
 
+	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/some/url", nil)
-		handler.ServeHTTP(rr, req)
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(recorder, request)
 	}
 }

@@ -11,14 +11,14 @@ import (
 )
 
 func TestAllowPanicsFalse(t *testing.T) {
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("test error")
 	}), gohm.Config{})
 
-	panicked := false
+	var panicked bool
 	served := make(chan struct{})
 
 	go func() {
@@ -28,12 +28,12 @@ func TestAllowPanicsFalse(t *testing.T) {
 			}
 			close(served)
 		}()
-		handler.ServeHTTP(rr, req)
+		handler.ServeHTTP(recorder, request)
 	}()
 
 	<-served
 
-	resp := rr.Result()
+	resp := recorder.Result()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
@@ -51,14 +51,14 @@ func TestAllowPanicsFalse(t *testing.T) {
 }
 
 func TestAllowPanicsTrue(t *testing.T) {
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("test error")
 	}), gohm.Config{AllowPanics: true})
 
-	panicked := false
+	var panicked bool
 	served := make(chan struct{})
 
 	go func() {
@@ -68,12 +68,12 @@ func TestAllowPanicsTrue(t *testing.T) {
 			}
 			close(served)
 		}()
-		handler.ServeHTTP(rr, req)
+		handler.ServeHTTP(recorder, request)
 	}()
 
 	<-served
 
-	resp := rr.Result()
+	resp := recorder.Result()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)

@@ -15,17 +15,16 @@ import (
 
 func TestLogAllWithoutError(t *testing.T) {
 	logOutput := new(bytes.Buffer)
-
 	response := "something interesting"
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(response))
 	}), gohm.Config{LogWriter: logOutput})
 
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
-
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
 	if actual, expected := logOutput.String(), fmt.Sprintf(" %d ", http.StatusOK); !strings.Contains(actual, expected) {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -35,14 +34,14 @@ func TestLogAllWithoutError(t *testing.T) {
 func TestLogAllWithError(t *testing.T) {
 	logOutput := new(bytes.Buffer)
 
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gohm.Error(w, "some error", http.StatusConflict)
 	}), gohm.Config{LogWriter: logOutput})
 
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
-
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
 	if actual, expected := logOutput.String(), fmt.Sprintf(" %d ", http.StatusConflict); !strings.Contains(actual, expected) {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -55,14 +54,14 @@ func TestLogErrorsWhenWriteHeaderErrorStatus(t *testing.T) {
 	logBitmask := gohm.LogStatusErrors
 	logOutput := new(bytes.Buffer)
 
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 	}), gohm.Config{LogBitmask: &logBitmask, LogWriter: logOutput})
 
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
-
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
 	if actual, expected := logOutput.String(), fmt.Sprintf(" %d ", http.StatusForbidden); !strings.Contains(actual, expected) {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -73,14 +72,14 @@ func TestLogErrorsWithError(t *testing.T) {
 	logBitmask := gohm.LogStatusErrors
 	logOutput := new(bytes.Buffer)
 
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gohm.Error(w, "some error", http.StatusForbidden)
 	}), gohm.Config{LogBitmask: &logBitmask, LogWriter: logOutput})
 
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
-
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
 	if actual, expected := logOutput.String(), fmt.Sprintf(" %d ", http.StatusForbidden); !strings.Contains(actual, expected) {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -91,14 +90,14 @@ func TestLogErrorsWithoutError(t *testing.T) {
 	logBitmask := gohm.LogStatusErrors
 	logOutput := new(bytes.Buffer)
 
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// no error
 	}), gohm.Config{LogBitmask: &logBitmask, LogWriter: logOutput})
 
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
-
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
 	if actual, expected := logOutput.String(), ""; actual != expected {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -112,14 +111,14 @@ func TestLogWithFormatStatusEscapedCharacters(t *testing.T) {
 	logBitmask := gohm.LogStatusAll
 	logOutput := new(bytes.Buffer)
 
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gohm.Error(w, "some error", http.StatusForbidden)
 	}), gohm.Config{LogBitmask: &logBitmask, LogWriter: logOutput, LogFormat: format})
 
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
-
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
 	if actual, expected := logOutput.String(), "{client-ip}\n"; actual != expected {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
@@ -130,17 +129,17 @@ func TestLogWithFormatStatic(t *testing.T) {
 	format := "{client} {client-ip} {client-port} - \"{method} {uri} {proto}\" {status} {bytes}"
 	logOutput := new(bytes.Buffer)
 
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gohm.Error(w, "some error", http.StatusForbidden)
 	}), gohm.Config{LogFormat: format, LogWriter: logOutput})
 
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
-
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
 	// hardcoded test request remote address
-	client := req.RemoteAddr
+	client := request.RemoteAddr
 	clientIP := client
 	clientPort := client
 	if colon := strings.LastIndex(client, ":"); colon != -1 {
@@ -159,14 +158,14 @@ func TestLogWithFormatIgnoresInvalidTokens(t *testing.T) {
 	logBitmask := gohm.LogStatusAll
 	logOutput := new(bytes.Buffer)
 
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gohm.Error(w, "some error", http.StatusForbidden)
 	}), gohm.Config{LogBitmask: &logBitmask, LogFormat: format, LogWriter: logOutput})
 
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
-
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
 	expected := fmt.Sprintf("This is an {invalid-token} with a %d after it\n", http.StatusForbidden)
 	if actual := logOutput.String(); actual != expected {
@@ -187,17 +186,15 @@ func TestLogWithFormatDynamic(t *testing.T) {
 	logBitmask := gohm.LogStatusAll
 	logOutput := new(bytes.Buffer)
 
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gohm.Error(w, "some error", http.StatusForbidden)
 	}), gohm.Config{LogBitmask: &logBitmask, LogFormat: format, LogWriter: logOutput})
 
 	beforeTime := time.Now()
-
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
-
-	handler.ServeHTTP(rr, req)
-
+	handler.ServeHTTP(recorder, request)
 	afterTime := time.Now()
 
 	// first, grab the begin-epoch, and compute the other begin values
@@ -254,18 +251,40 @@ func TestLogWithFormatDynamic(t *testing.T) {
 	}
 }
 
+func TestLogWithFormatEmoji(t *testing.T) {
+	format := "😛 {status} 😊" // log format starts and ends with a multi-byte rune
+	logOutput := new(bytes.Buffer)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
+	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gohm.Error(w, "some error", http.StatusForbidden)
+	}), gohm.Config{LogFormat: format, LogWriter: logOutput})
+
+	handler.ServeHTTP(recorder, request)
+
+	actual := logOutput.String()
+	expected := fmt.Sprintf("😛 %d 😊\n", http.StatusForbidden)
+	if actual != expected {
+		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+}
+
 func BenchmarkWithLogsElided(b *testing.B) {
-	logBitmask := uint32(gohm.LogStatus4xx | gohm.LogStatus5xx) // only errors
+	logBitmask := gohm.LogStatusErrors
 	logOutput := new(bytes.Buffer)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// this does not error, so nothing ought to be logged
 	}), gohm.Config{LogBitmask: &logBitmask, LogWriter: logOutput})
 
+	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		req := httptest.NewRequest("GET", "/some/url", nil)
-		rr := httptest.NewRecorder()
-		handler.ServeHTTP(rr, req)
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(recorder, request)
 		logOutput.Reset()
 	}
 }
@@ -277,10 +296,12 @@ func BenchmarkWithLogs(b *testing.B) {
 		w.WriteHeader(http.StatusForbidden) // error class forces log entry
 	}), gohm.Config{LogWriter: logOutput})
 
+	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
-		req := httptest.NewRequest("GET", "/some/url", nil)
-		w := httptest.NewRecorder()
-		handler.ServeHTTP(w, req)
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(recorder, request)
 		logOutput.Reset()
 	}
 }
