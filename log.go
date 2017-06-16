@@ -8,9 +8,10 @@ import (
 	"time"
 )
 
-// ApacheCommonLogFormat (CLF) is the default log line format for Apache Web Server.  It is included
-// here for users of this library that would like to easily specify log lines out to be emitted
-// using the Apache Common Log Format (CLR), by setting `LogFormat` to `gohm.ApackeCommonLogFormat`.
+// ApacheCommonLogFormat (CLF) is the default log line format for Apache Web
+// Server.  It is included here for users of this library that would like to
+// easily specify log lines out to be emitted using the Apache Common Log Format
+// (CLR), by setting `LogFormat` to `gohm.ApackeCommonLogFormat`.
 const ApacheCommonLogFormat = "{client-ip} - - [{begin}] \"{method} {uri} {proto}\" {status} {bytes}"
 
 const apacheTimeFormat = "02/Jan/2006:15:04:05 -0700"
@@ -44,26 +45,27 @@ const LogStatusAll uint32 = 1 | 2 | 4 | 8 | 16
 // LogStatusErrors used to log HTTP requests which have 4xx or 5xx response
 const LogStatusErrors uint32 = 8 | 16
 
-// compileFormat converts the format string into a slice of functions to invoke when creating a log
-// line.  It's implemented as a state machine that alternates between 2 states: consuming runes to
-// create a constant string to emit, and consuming runes to create a token that is intended to match
-// one of the pre-defined format specifier tokens, or an undefined format specifier token that
-// begins with "http-".
-func compileFormat(format string) []func(*responseWriter, *http.Request, *bytes.Buffer) {
-	// build slice of emitter functions, each will emit the requested information
-	var emitters []func(*responseWriter, *http.Request, *bytes.Buffer)
+// compileFormat converts the format string into a slice of functions to invoke
+// when creating a log line.  It's implemented as a state machine that
+// alternates between 2 states: consuming runes to create a constant string to
+// emit, and consuming runes to create a token that is intended to match one of
+// the pre-defined format specifier tokens, or an undefined format specifier
+// token that begins with "http-".
+func compileFormat(format string) []func(*responseWriter, *http.Request, *[]byte) {
+	// build slice of emitter functions, each will emit the requested
+	// information
+	var emitters []func(*responseWriter, *http.Request, *[]byte)
 
-	// state machine alternating between two states: either capturing runes for the next
-	// constant buffer, or capturing runes for the next token
+	// state machine alternating between two states: either capturing runes for
+	// the next constant buffer, or capturing runes for the next token
 	var buf, token bytes.Buffer
-	var capturingToken bool // false, because start off capturing buffer runes
-
+	var capturingToken bool  // false, because start off capturing buffer runes
 	var nextRuneEscaped bool // true when next rune has been escaped
 
 	for _, rune := range format {
 		if nextRuneEscaped {
-			// when this rune has been escaped, then just write it out to whichever
-			// buffer we're collecting to right now
+			// when this rune has been escaped, then just write it out to
+			// whichever buffer we're collecting to right now
 			if capturingToken {
 				token.WriteRune(rune)
 			} else {
@@ -73,22 +75,22 @@ func compileFormat(format string) []func(*responseWriter, *http.Request, *bytes.
 			continue
 		}
 		if rune == '\\' {
-			// Format specifies that next rune ought to be escaped.  Handy when extra
-			// curly braces are desired in the log line format.
+			// Format specifies that next rune ought to be escaped.  Handy when
+			// extra curly braces are desired in the log line format.
 			nextRuneEscaped = true
 			continue
 		}
 		if rune == '{' {
 			// Stop capturing buf, and begin capturing token.
-			// NOTE: undefined behavior if open curly brace when previous open curly
-			// brace has not yet been closed.
+			// NOTE: undefined behavior if open curly brace when previous open
+			// curly brace has not yet been closed.
 			emitters = append(emitters, makeStringEmitter(buf.String()))
 			buf.Reset()
 			capturingToken = true
 		} else if rune == '}' {
 			// Stop capturing token, and begin capturing buffer.
-			// NOTE: undefined behavior if close curly brace when not capturing runes
-			// for a token.
+			// NOTE: undefined behavior if close curly brace when not capturing
+			// runes for a token.
 			switch tok := token.String(); tok {
 			case "begin":
 				emitters = append(emitters, beginEmitter)
@@ -156,95 +158,95 @@ func compileFormat(format string) []func(*responseWriter, *http.Request, *bytes.
 	return emitters
 }
 
-func makeStringEmitter(value string) func(*responseWriter, *http.Request, *bytes.Buffer) {
-	return func(_ *responseWriter, _ *http.Request, bb *bytes.Buffer) {
-		bb.WriteString(value)
+func makeStringEmitter(value string) func(*responseWriter, *http.Request, *[]byte) {
+	return func(_ *responseWriter, _ *http.Request, bb *[]byte) {
+		*bb = append(*bb, value...)
 	}
 }
 
-func beginEmitter(lrw *responseWriter, _ *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(lrw.begin.UTC().Format(apacheTimeFormat))
+func beginEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, lrw.begin.UTC().Format(apacheTimeFormat)...)
 }
 
-func beginEpochEmitter(lrw *responseWriter, _ *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(strconv.FormatInt(lrw.begin.UTC().Unix(), 10))
+func beginEpochEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, strconv.FormatInt(lrw.begin.UTC().Unix(), 10)...)
 }
 
-func beginISO8601Emitter(lrw *responseWriter, _ *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(lrw.begin.UTC().Format(time.RFC3339))
+func beginISO8601Emitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, lrw.begin.UTC().Format(time.RFC3339)...)
 }
 
-func bytesEmitter(lrw *responseWriter, _ *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(strconv.FormatInt(lrw.size, 10))
+func bytesEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, strconv.FormatInt(lrw.size, 10)...)
 }
 
-func clientEmitter(_ *responseWriter, r *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(r.RemoteAddr)
+func clientEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
+	*bb = append(*bb, r.RemoteAddr...)
 }
 
-func clientIPEmitter(_ *responseWriter, r *http.Request, bb *bytes.Buffer) {
+func clientIPEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
 	value := r.RemoteAddr // ip:port
 	if colon := strings.LastIndex(value, ":"); colon != -1 {
 		value = value[:colon]
 	}
-	bb.WriteString(value)
+	*bb = append(*bb, value...)
 }
 
-func clientPortEmitter(_ *responseWriter, r *http.Request, bb *bytes.Buffer) {
+func clientPortEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
 	value := r.RemoteAddr // ip:port
 	if colon := strings.LastIndex(value, ":"); colon != -1 {
 		value = value[colon+1:]
 	}
-	bb.WriteString(value)
+	*bb = append(*bb, value...)
 }
 
-func durationEmitter(lrw *responseWriter, _ *http.Request, bb *bytes.Buffer) {
+func durationEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
 	// 6 decimal places: microsecond precision
-	bb.WriteString(strconv.FormatFloat(lrw.end.Sub(lrw.begin).Seconds(), 'f', 6, 64))
+	*bb = append(*bb, strconv.FormatFloat(lrw.end.Sub(lrw.begin).Seconds(), 'f', 6, 64)...)
 }
 
-func endEmitter(lrw *responseWriter, _ *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(lrw.end.UTC().Format(apacheTimeFormat))
+func endEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, lrw.end.UTC().Format(apacheTimeFormat)...)
 }
 
-func endEpochEmitter(lrw *responseWriter, _ *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(strconv.FormatInt(lrw.end.UTC().Unix(), 10))
+func endEpochEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, strconv.FormatInt(lrw.end.UTC().Unix(), 10)...)
 }
 
-func endISO8601Emitter(lrw *responseWriter, _ *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(lrw.end.UTC().Format(time.RFC3339))
+func endISO8601Emitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, lrw.end.UTC().Format(time.RFC3339)...)
 }
 
-func errorMessageEmitter(rw *responseWriter, _ *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(rw.errorMessage)
+func errorMessageEmitter(rw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, rw.errorMessage...)
 }
 
-func methodEmitter(_ *responseWriter, r *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(r.Method)
+func methodEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
+	*bb = append(*bb, r.Method...)
 }
 
-func protoEmitter(_ *responseWriter, r *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(r.Proto)
+func protoEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
+	*bb = append(*bb, r.Proto...)
 }
 
-func statusEmitter(lrw *responseWriter, _ *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(strconv.FormatInt(int64(lrw.status), 10))
+func statusEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, strconv.FormatInt(int64(lrw.status), 10)...)
 }
 
-func statusTextEmitter(lrw *responseWriter, _ *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(http.StatusText(lrw.status))
+func statusTextEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, http.StatusText(lrw.status)...)
 }
 
-func uriEmitter(_ *responseWriter, r *http.Request, bb *bytes.Buffer) {
-	bb.WriteString(r.RequestURI)
+func uriEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
+	*bb = append(*bb, r.RequestURI...)
 }
 
-func makeHeaderEmitter(headerName string) func(*responseWriter, *http.Request, *bytes.Buffer) {
-	return func(_ *responseWriter, r *http.Request, bb *bytes.Buffer) {
+func makeHeaderEmitter(headerName string) func(*responseWriter, *http.Request, *[]byte) {
+	return func(_ *responseWriter, r *http.Request, bb *[]byte) {
 		value := r.Header.Get(headerName)
 		if value == "" {
 			value = "-"
 		}
-		bb.WriteString(value)
+		*bb = append(*bb, value...)
 	}
 }

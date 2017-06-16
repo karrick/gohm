@@ -110,7 +110,7 @@ func (rw *responseWriter) flush() error {
 //		log.Fatal(http.ListenAndServe(":8080", nil))
 //	}
 func New(next http.Handler, config Config) http.Handler {
-	var emitters []func(*responseWriter, *http.Request, *bytes.Buffer)
+	var emitters []func(*responseWriter, *http.Request, *[]byte)
 
 	if config.LogWriter != nil {
 		if config.LogBitmask == nil {
@@ -213,11 +213,11 @@ func New(next http.Handler, config Config) http.Handler {
 			if (atomic.LoadUint32(config.LogBitmask))&bit > 0 {
 				rw.end = time.Now()
 
-				buf := bytes.NewBuffer(make([]byte, 0, 128))
+				buf := make([]byte, 0, 128)
 				for _, emitter := range emitters {
-					emitter(rw, r, buf)
+					emitter(rw, r, &buf)
 				}
-				_, _ = buf.WriteTo(config.LogWriter)
+				_, _ = config.LogWriter.Write(buf)
 			}
 		}
 	})
