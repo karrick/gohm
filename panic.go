@@ -5,9 +5,10 @@ import (
 	"net/http"
 )
 
-// Attempt to serve the query by calling the original handler, next.  Normally the handler completes
-// ServeHTTP, and this will close the completed channel.  If the ServeHTTP method panics, then the
-// panicked error text is sent to the paniched channel.
+// Attempt to serve the query by calling the original handler, next.  Normally
+// the handler completes ServeHTTP, and this will close the completed channel.
+// If the ServeHTTP method panics, then the panicked error text is sent to the
+// paniched channel.
 func serveWithPanicProtection(w http.ResponseWriter, r *http.Request, next http.Handler, completed chan struct{}, panicked chan<- string) {
 	defer func() {
 		if r := recover(); r != nil {

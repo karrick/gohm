@@ -2,6 +2,7 @@ package gohm
 
 import (
 	"compress/gzip"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -16,9 +17,9 @@ func (g gzipResponseWriter) Write(b []byte) (int, error) {
 	return g.gzipWriter.Write(b)
 }
 
-// WithGzip returns a new http.Handler that optionally compresses the response text using the gzip
-// compression algorithm when the HTTP request's `Accept-Encoding` header includes the string
-// `gzip`.
+// WithGzip returns a new http.Handler that optionally compresses the response
+// text using the gzip compression algorithm when the HTTP request's
+// `Accept-Encoding` header includes the string `gzip`.
 //
 //	mux := http.NewServeMux()
 //	mux.Handle("/example/path", gohm.WithGzip(someHandler))
@@ -29,7 +30,11 @@ func WithGzip(next http.Handler) http.Handler {
 			return
 		}
 		gz := gzip.NewWriter(w)
-		defer func() { _ = gz.Close() }()
+		defer func() {
+			if err := gz.Close(); err != nil {
+				Error(w, fmt.Sprintf("cannot compress stream: %s", err), http.StatusInternalServerError)
+			}
+		}()
 		w.Header().Set("Content-Encoding", "gzip")
 		next.ServeHTTP(gzipResponseWriter{ResponseWriter: w, gzipWriter: gz}, r)
 	})

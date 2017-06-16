@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-// responseWriter must behave exactly like http.ResponseWriter, yet store up response until query
-// complete and flush invoked.
+// responseWriter must behave exactly like http.ResponseWriter, yet store up
+// response until query complete and flush invoked.
 type responseWriter struct {
 	http.ResponseWriter
 	header        http.Header
@@ -69,22 +69,23 @@ func (rw *responseWriter) flush() error {
 	return err
 }
 
-// New returns a new http.Handler that calls the specified next http.Handler, and performs the
-// requested operations before and after the downstream handler as specified by the gohm.Config
-// structure passed to it.
+// New returns a new http.Handler that calls the specified next http.Handler,
+// and performs the requested operations before and after the downstream handler
+// as specified by the gohm.Config structure passed to it.
 //
-// It receives a gohm.Config struct rather than a pointer to one, so users less likely to consider
-// modification after creating the http.Handler.
+// It receives a gohm.Config struct rather than a pointer to one, so users less
+// likely to consider modification after creating the http.Handler.
 //
-//	const staticTimeout = time.Second // Used to control how long it takes to serve a static file.
+//  // Used to control how long it takes to serve a static file.
+//	const staticTimeout = time.Second
 //
 //	var (
-//		// Will store statistics counters for status codes 1xx, 2xx, 3xx, 4xx, 5xx, as well as a
-//		// counter for all responses
+//		// Will store statistics counters for status codes 1xx, 2xx, 3xx, 4xx,
+//		// 5xx, as well as a counter for all responses
 //		counters gohm.Counters
 //
-//		// Used to dynamically control log level of HTTP logging.  After handler created, this must
-//		// be accessed using the sync/atomic package.
+//		// Used to dynamically control log level of HTTP logging. After handler
+//      // created, this must be accessed using the sync/atomic package.
 //		logBitmask = gohm.LogStatusErrors
 //
 //		// Determines HTTP log format
@@ -126,29 +127,31 @@ func New(next http.Handler, config Config) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Create a responseWriter to pass to next.ServeHTTP and collect downstream
-		// handler's response to query.  It will eventually be used to flush to the client,
-		// assuming neither the handler panics, nor the client connection is detected to be
-		// closed.
+		// Create a responseWriter to pass to next.ServeHTTP and collect
+		// downstream handler's response to query.  It will eventually be used
+		// to flush to the client, assuming neither the handler panics, nor the
+		// client connection is detected to be closed.
 		rw := &responseWriter{ResponseWriter: w}
 
 		var ctx context.Context
 		var cancel func()
 
-		// Create a couple of channels to detect one of 3 ways to exit this handler.
+		// Create a couple of channels to detect one of 3 ways to exit this
+		// handler.
 		serverCompleted := make(chan struct{})
 		serverPanicked := make(chan string, 1)
 
 		if config.Timeout > 0 {
-			// Adding a timeout to a request context spins off a goroutine that will
-			// invoke the specified cancel function for us after the timeout has
-			// elapsed.  Invoking the cancel function causes the context's Done channel
-			// to close.  Detecting timeout is done by waiting for context.Done() to close.
+			// Adding a timeout to a request context spins off a goroutine that
+			// will invoke the specified cancel function for us after the
+			// timeout has elapsed.  Invoking the cancel function causes the
+			// context's Done channel to close.  Detecting timeout is done by
+			// waiting for context.Done() to close.
 			ctx, cancel = context.WithTimeout(r.Context(), config.Timeout)
 		} else {
 			// When no timeout given, we still need a mechanism to track context
-			// cancellation so this handler can detect when client has closed its
-			// connection.
+			// cancellation so this handler can detect when client has closed
+			// its connection.
 			ctx, cancel = context.WithCancel(r.Context())
 		}
 		r = r.WithContext(ctx)
@@ -158,16 +161,16 @@ func New(next http.Handler, config Config) http.Handler {
 			rw.begin = time.Now()
 		}
 
-		// We must invoke downstream handler in separate goroutine in order to ensure this
-		// handler only responds to one of the three events below, whichever event takes
-		// place first.
+		// We must invoke downstream handler in separate goroutine in order to
+		// ensure this handler only responds to one of the three events below,
+		// whichever event takes place first.
 		go serveWithPanicProtection(rw, r, next, serverCompleted, serverPanicked)
 
 		// Wait for the first of either of 3 events:
-		//   * serveComplete: the next.ServeHTTP method completed normally (possibly even
-		//     with an erroneous status code).
-		//   * servePanicked: the next.ServeHTTP method failed to complete, and panicked
-		//     instead with a text message.
+		//   * serveComplete: the next.ServeHTTP method completed normally
+		//     (possibly even with an erroneous status code).
+		//   * servePanicked: the next.ServeHTTP method failed to complete, and
+		//     panicked instead with a text message.
 		//   * context is done: triggered when timeout or client disconnect.
 		select {
 
@@ -181,12 +184,12 @@ func New(next http.Handler, config Config) http.Handler {
 			rw.error(text, http.StatusInternalServerError)
 
 		case <-ctx.Done():
-			// we'll create a new rw that downstream handler doesn't have access to so it cannot
-			// mutate it.
+			// we'll create a new rw that downstream handler doesn't have access
+			// to so it cannot mutate it.
 			rw = &responseWriter{ResponseWriter: w, begin: rw.begin}
 
-			// the context was canceled; where ctx.Err() will say why
-			// 503 (this is what http.TimeoutHandler returns)
+			// the context was canceled; where ctx.Err() will say why 503 (this
+			// is what http.TimeoutHandler returns)
 			rw.error(ctx.Err().Error(), http.StatusServiceUnavailable)
 
 		}
@@ -195,7 +198,8 @@ func New(next http.Handler, config Config) http.Handler {
 			// cannot write responseWriter's contents to http.ResponseWriter
 			rw.errorMessage = err.Error()
 			rw.status = http.StatusInternalServerError
-			// no use emitting error message to client when cannot send original payload back
+			// no use emitting error message to client when cannot send original
+			// payload back
 		}
 
 		statusClass := rw.status / 100

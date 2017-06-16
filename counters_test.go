@@ -16,9 +16,10 @@ func test(t *testing.T, status int) gohm.Counters {
 	req := httptest.NewRequest("GET", "/some/url", nil)
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if status != http.StatusOK {
-			// To ensure status code set even when next handler does not explicitly set
-			// it, we omit setting header when StatusOK is provided, and below we invoke
-			// this test function for both http.StatusOK and another 2xx status code.
+			// To ensure status code set even when next handler does not
+			// explicitly set it, we omit setting header when StatusOK is
+			// provided, and below we invoke this test function for both
+			// http.StatusOK and another 2xx status code.
 			w.WriteHeader(status)
 		}
 		w.Write([]byte(response))

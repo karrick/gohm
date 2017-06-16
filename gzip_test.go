@@ -62,7 +62,11 @@ func TestGzipCompressed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = gz.Close() }()
+	defer func() {
+		if err := gz.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	blob, err := ioutil.ReadAll(gz)
 	if err != nil {

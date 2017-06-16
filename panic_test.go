@@ -82,8 +82,9 @@ func TestAllowPanicsTrue(t *testing.T) {
 	if actual, expected := panicked, true; actual != expected {
 		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
 	}
-	// NOTE: Cannot verify resp.StatusCode because httptest.ResponseRecorder initializes
-	// StatusCode to http.StatusOK if not written, even though it is never set.
+	// NOTE: Cannot verify resp.StatusCode because httptest.ResponseRecorder
+	// initializes StatusCode to http.StatusOK if not written, even though it is
+	// never set.
 	if actual, expected := string(body), ""; actual != expected {
 		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
 	}

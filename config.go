@@ -5,20 +5,22 @@ import (
 	"time"
 )
 
-// Config specifies the parameters used for the wrapping the downstream http.Handler.
+// Config specifies the parameters used for the wrapping the downstream
+// http.Handler.
 type Config struct {
-	// AllowPanics, when set to true, causes panics to propagate from downstream handlers.  When
-	// set to false, also the default value, panics will be converted into Internal Server
-	// Errors (status code 500).  You cannot change this setting after creating the
-	// http.Handler.
+	// AllowPanics, when set to true, causes panics to propagate from downstream
+	// handlers.  When set to false, also the default value, panics will be
+	// converted into Internal Server Errors (status code 500).  You cannot
+	// change this setting after creating the http.Handler.
 	AllowPanics bool
 
 	// Counters, if not nil, tracks counts of handler response status codes.
 	Counters *Counters
 
-	// LogBitmask, if not nil, specifies a bitmask to use to determine which HTTP status classes
-	// ought to be logged.  If not set, all HTTP requests will be logged.  This value may be
-	// changed using sync/atomic package even after creating the http.Handler.
+	// LogBitmask, if not nil, specifies a bitmask to use to determine which
+	// HTTP status classes ought to be logged.  If not set, all HTTP requests
+	// will be logged.  This value may be changed using sync/atomic package even
+	// after creating the http.Handler.
 	//
 	// The following bitmask values are supported:
 	//
@@ -31,8 +33,9 @@ type Config struct {
 	//	LogStatusErrors : LogStatusAll used to log HTTP requests which have 4xx or 5xx response
 	LogBitmask *uint32
 
-	// LogFormat specifies the format for log lines.  When left empty, gohm.DefaultLogFormat is
-	// used.  You cannot change the log format after creating the http.Handler.
+	// LogFormat specifies the format for log lines.  When left empty,
+	// gohm.DefaultLogFormat is used.  You cannot change the log format after
+	// creating the http.Handler.
 	//
 	// The following format directives are supported:
 	//
@@ -55,15 +58,16 @@ type Config struct {
 	//	uri             : request URI
 	LogFormat string
 
-	// LogWriter, if not nil, specifies that log lines ought to be written to the specified
-	// io.Writer.  You cannot change the io.Writer to which logs are written after creating the
-	// http.Handler.
+	// LogWriter, if not nil, specifies that log lines ought to be written to
+	// the specified io.Writer.  You cannot change the io.Writer to which logs
+	// are written after creating the http.Handler.
 	LogWriter io.Writer
 
-	// `Timeout`, when not 0, specifies the amount of time allotted to wait for downstream
-	// `http.Handler` response.  You cannot change the handler timeout after creating the
-	// `http.Handler`.  The zero value for Timeout elides timeout protection, and `gohm` will
-	// wait forever for a downstream `http.Handler` to return.  It is recommended that a
-	// sensible timeout always be chosen for all production servers.
+	// `Timeout`, when not 0, specifies the amount of time allotted to wait for
+	// downstream `http.Handler` response.  You cannot change the handler
+	// timeout after creating the `http.Handler`.  The zero value for Timeout
+	// elides timeout protection, and `gohm` will wait forever for a downstream
+	// `http.Handler` to return.  It is recommended that a sensible timeout
+	// always be chosen for all production servers.
 	Timeout time.Duration
 }
