@@ -1,11 +1,11 @@
 package gohm
 
 import (
-	"bytes"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 // ApacheCommonLogFormat (CLF) is the default log line format for Apache Web
@@ -58,7 +58,7 @@ func compileFormat(format string) []func(*responseWriter, *http.Request, *[]byte
 
 	// state machine alternating between two states: either capturing runes for
 	// the next constant buffer, or capturing runes for the next token
-	var buf, token bytes.Buffer
+	var buf, token []byte
 	var capturingToken bool  // false, because start off capturing buffer runes
 	var nextRuneEscaped bool // true when next rune has been escaped
 
@@ -67,9 +67,9 @@ func compileFormat(format string) []func(*responseWriter, *http.Request, *[]byte
 			// when this rune has been escaped, then just write it out to
 			// whichever buffer we're collecting to right now
 			if capturingToken {
-				token.WriteRune(rune)
+				appendRune(&token, rune)
 			} else {
-				buf.WriteRune(rune)
+				appendRune(&buf, rune)
 			}
 			nextRuneEscaped = false
 			continue
@@ -84,14 +84,14 @@ func compileFormat(format string) []func(*responseWriter, *http.Request, *[]byte
 			// Stop capturing buf, and begin capturing token.
 			// NOTE: undefined behavior if open curly brace when previous open
 			// curly brace has not yet been closed.
-			emitters = append(emitters, makeStringEmitter(buf.String()))
-			buf.Reset()
+			emitters = append(emitters, makeStringEmitter(string(buf)))
+			buf = buf[:0]
 			capturingToken = true
 		} else if rune == '}' {
 			// Stop capturing token, and begin capturing buffer.
 			// NOTE: undefined behavior if close curly brace when not capturing
 			// runes for a token.
-			switch tok := token.String(); tok {
+			switch tok := string(token); tok {
 			case "begin":
 				emitters = append(emitters, beginEmitter)
 			case "begin-epoch":
@@ -131,29 +131,30 @@ func compileFormat(format string) []func(*responseWriter, *http.Request, *[]byte
 					// emit value of specified HTTP request header
 					emitters = append(emitters, makeHeaderEmitter(tok[5:]))
 				} else {
-					// unknown token, so just append to buf
-					buf.WriteRune('{')
-					buf.WriteString(tok)
-					buf.WriteRune(rune)
+					// unknown token: just append to buf, wrapped in curly
+					// braces
+					buf = append(buf, '{')
+					buf = append(buf, tok...)
+					buf = append(buf, '}')
 				}
 			}
-			token.Reset()
+			token = token[:0]
 			capturingToken = false
 		} else {
-			// emit to either token or buffer
+			// append to either token or buffer
 			if capturingToken {
-				token.WriteRune(rune)
+				appendRune(&token, rune)
 			} else {
-				buf.WriteRune(rune)
+				appendRune(&buf, rune)
 			}
 		}
 	}
 	if capturingToken {
-		buf.WriteRune('{')
-		buf.Write(token.Bytes())
+		buf = append(buf, '{') // token started with left curly brace, so it needs to precede the token
+		buf = append(buf, token...)
 	}
-	buf.WriteRune('\n')
-	emitters = append(emitters, makeStringEmitter(buf.String()))
+	buf = append(buf, '\n') // each log line terminated by newline byte
+	emitters = append(emitters, makeStringEmitter(string(buf)))
 
 	return emitters
 }
@@ -249,4 +250,15 @@ func makeHeaderEmitter(headerName string) func(*responseWriter, *http.Request, *
 		}
 		*bb = append(*bb, value...)
 	}
+}
+
+func appendRune(buf *[]byte, r rune) {
+	if r < utf8.RuneSelf {
+		*buf = append(*buf, byte(r))
+		return
+	}
+	olen := len(*buf)
+	*buf = append(*buf, 0, 0, 0, 0)              // grow buf large enough to accommodate largest possible UTF8 sequence
+	n := utf8.EncodeRune((*buf)[olen:olen+4], r) // encode rune into newly allocated buf space
+	*buf = (*buf)[:olen+n]                       // trim buf to actual size used by rune addition
 }
