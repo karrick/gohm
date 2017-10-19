@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -14,25 +15,23 @@ type CORSConfig struct {
 	// `Origin` header value for pre-flight checks.
 	OriginsFilter *regexp.Regexp
 
-	// AllowHeaders is the response string used to fill the
-	// `Access-Control-Allow-Headers` header in pre-flight check responses. When
-	// empty, the `Access-Control-Allow-Headers` header will not be sent to
-	// clients during pre-flight checks.
+	// AllowHeaders is the value for the `Access-Control-Allow-Headers` header
+	// in pre-flight check responses. When empty, the
+	// `Access-Control-Allow-Headers` header will not be sent to clients during
+	// pre-flight checks.
 	AllowHeaders string
 
 	// AllowMethods is a list of HTTP method names which are allowed for this
 	// handler.
 	AllowMethods []string
 
-	// AllowOrigin is the response string used to fill the
-	// `Access-Control-Allow-Origin` header in pre-flight check
-	// responses. When empty, defaults to "*".
+	// AllowOrigin is the value for the `Access-Control-Allow-Origin` header in
+	// pre-flight check responses. When empty, defaults to "*".
 	AllowOrigin string
 
-	// CacheControl is the response string used to fill the `Cache-Control`
-	// header in pre-flight check responses. When empty, the `Cache-Control`
-	// header will not be sent to clients during pre-flight checks.
-	CacheControl string
+	// MaxAgeSeconds is the number of seconds used to fill the
+	// `Access-Control-Max-Age` header in pre-flight check responses.
+	MaxAgeSeconds int
 }
 
 // CORSHandler returns a handler that responds to OPTIONS request so that CORS
@@ -55,6 +54,8 @@ func CORSHandler(next http.Handler, config CORSConfig) http.Handler {
 		allowOrigin = config.AllowOrigin
 	}
 
+	maxAge := strconv.Itoa(config.MaxAgeSeconds)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// When Cross Origin Resource Sharing (CORS) request arrives, the
 		// browser submits an `Origin` header that specifies where the request
@@ -76,13 +77,11 @@ func CORSHandler(next http.Handler, config CORSConfig) http.Handler {
 			// check. Respond as normally would for an OPTIONS request, but
 			// include headers that notify the browser that the pre-flight is
 			// successful.
-			if config.CacheControl != "" {
-				w.Header().Set("Cache-Control", config.CacheControl)
-			}
 			if config.AllowHeaders != "" {
 				w.Header().Set("Access-Control-Allow-Headers", config.AllowHeaders)
 			}
 			w.Header().Set("Access-Control-Allow-Methods", allowedMethods)
+			w.Header().Set("Access-Control-Max-Age", maxAge)
 
 			// During pre-flight checks, browser also submits the following
 			// header to specify what method it would like to use.
