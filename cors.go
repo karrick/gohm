@@ -15,11 +15,9 @@ type CORSConfig struct {
 	// `Origin` header value for pre-flight checks.
 	OriginsFilter *regexp.Regexp
 
-	// AllowHeaders is the value for the `Access-Control-Allow-Headers` header
-	// in pre-flight check responses. When empty, the
-	// `Access-Control-Allow-Headers` header will not be sent to clients during
-	// pre-flight checks.
-	AllowHeaders string
+	// AllowHeaders is a list of HTTP header names which are allowed to be sent
+	// to this handler.
+	AllowHeaders []string
 
 	// AllowMethods is a list of HTTP method names which are allowed for this
 	// handler.
@@ -47,12 +45,10 @@ func CORSHandler(next http.Handler, config CORSConfig) http.Handler {
 	allowedMethods := strings.Join(config.AllowMethods, ", ")
 	allowedMethodsHandler := AllowedMethodsHandler(next, config.AllowMethods)
 
-	var allowOrigin string
-	if config.AllowOrigin == "" {
-		allowOrigin = "*"
-	} else {
-		allowOrigin = config.AllowOrigin
-	}
+	// Most browser frameworks also send `X-Requested-With` header, and we want
+	// to allow such requests.
+	config.AllowHeaders = sortAndMaybeInsertString("X-Requested-With", config.AllowHeaders)
+	allowHeaders := strings.Join(config.AllowHeaders, ", ")
 
 	maxAge := strconv.Itoa(config.MaxAgeSeconds)
 
@@ -61,8 +57,9 @@ func CORSHandler(next http.Handler, config CORSConfig) http.Handler {
 		// browser submits an `Origin` header that specifies where the request
 		// came from. This handler will deny requests that do not match the
 		// specified regular expression.
-		if origin := r.Header.Get("Origin"); origin != "" && !config.OriginsFilter.MatchString(origin) {
-			Error(w, fmt.Sprintf("origin domain not permitted: %q", origin), http.StatusForbidden)
+		requestOrigin := r.Header.Get("Origin")
+		if requestOrigin != "" && !config.OriginsFilter.MatchString(requestOrigin) {
+			Error(w, fmt.Sprintf("origin domain not permitted: %q", requestOrigin), http.StatusForbidden)
 			return
 		}
 
@@ -70,16 +67,16 @@ func CORSHandler(next http.Handler, config CORSConfig) http.Handler {
 		// `Access-Control-Allow-Origin` header to handle so-called "simple
 		// requests," which do not require a pre-flight check by the browser,
 		// yet the browser still inspects the response's headers for this value.
-		w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+		if requestOrigin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", requestOrigin)
+		}
 
 		if r.Method == "OPTIONS" {
 			// If the request method is OPTIONS, this may be a pre-flight
 			// check. Respond as normally would for an OPTIONS request, but
 			// include headers that notify the browser that the pre-flight is
 			// successful.
-			if config.AllowHeaders != "" {
-				w.Header().Set("Access-Control-Allow-Headers", config.AllowHeaders)
-			}
+			w.Header().Set("Access-Control-Allow-Headers", allowHeaders)
 			w.Header().Set("Access-Control-Allow-Methods", allowedMethods)
 			w.Header().Set("Access-Control-Max-Age", maxAge)
 
