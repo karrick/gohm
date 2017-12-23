@@ -54,30 +54,40 @@ func WithGzip(next http.Handler) http.Handler {
 //	mux.Handle("/example/path", gohm.WithCompression(someHandler))
 func WithCompression(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var newWriteCloser io.WriteCloser
 		var err error
+		var newWriteCloser io.WriteCloser
+		var encodingName, responseHeaderName string
 
-		ae := r.Header.Get("Accept-Encoding")
+		requestHeaderName := "TE"
+		acceptableEncodings := r.Header.Get(requestHeaderName)
+		if acceptableEncodings != "" {
+			// If transfer-encoding specified, then completely ignore
+			// Accept-Encoding, because the upstream node has specifically
+			// requested a node-to-node transfer compression algorithm.
+			responseHeaderName = "Transfer-Encoding"
+		} else {
+			responseHeaderName = "Content-Encoding"
+			requestHeaderName = "Accept-Encoding"
+			acceptableEncodings = r.Header.Get(requestHeaderName)
+		}
 
 		// Because many browsers include a buggy deflate compression algorithm,
 		// prefer `gzip` over `deflate` if both are acceptable.
-		if strings.Contains(ae, "snappy") {
+		if encodingName = "snappy"; strings.Contains(acceptableEncodings, encodingName) {
 			newWriteCloser = snappy.NewBufferedWriter(w)
 			defer func() {
 				if err := newWriteCloser.Close(); err != nil {
 					Error(w, fmt.Sprintf("cannot compress stream using snappy: %s", err), http.StatusInternalServerError)
 				}
 			}()
-			w.Header().Set("Content-Encoding", "snappy")
-		} else if strings.Contains(ae, "gzip") {
+		} else if encodingName = "gzip"; strings.Contains(acceptableEncodings, encodingName) {
 			newWriteCloser = gzip.NewWriter(w)
 			defer func() {
 				if err := newWriteCloser.Close(); err != nil {
 					Error(w, fmt.Sprintf("cannot compress stream using gzip: %s", err), http.StatusInternalServerError)
 				}
 			}()
-			w.Header().Set("Content-Encoding", "gzip")
-		} else if strings.Contains(ae, "deflate") {
+		} else if encodingName = "deflate"; strings.Contains(acceptableEncodings, encodingName) {
 			newWriteCloser, err = flate.NewWriter(w, -1)
 			if err != nil {
 				next.ServeHTTP(w, r)
@@ -88,12 +98,12 @@ func WithCompression(next http.Handler) http.Handler {
 					Error(w, fmt.Sprintf("cannot compress stream using deflate: %s", err), http.StatusInternalServerError)
 				}
 			}()
-			w.Header().Set("Content-Encoding", "deflate")
 		} else {
 			next.ServeHTTP(w, r)
 			return
 		}
-		r.Header.Del("Accept-Encoding")
+		r.Header.Del(requestHeaderName)
+		w.Header().Set(responseHeaderName, encodingName)
 		next.ServeHTTP(compressionResponseWriter{ResponseWriter: w, compressionWriter: newWriteCloser}, r)
 	})
 }
