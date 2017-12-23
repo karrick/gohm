@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/golang/snappy"
 	"github.com/karrick/gohm"
 )
 
@@ -58,17 +59,17 @@ func TestGzipCompressed(t *testing.T) {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
 	}
 
-	gz, err := gzip.NewReader(recorder.Body)
+	iorc, err := gzip.NewReader(recorder.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := gz.Close(); err != nil {
+		if err := iorc.Close(); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
-	blob, err := ioutil.ReadAll(gz)
+	blob, err := ioutil.ReadAll(iorc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +79,7 @@ func TestGzipCompressed(t *testing.T) {
 	}
 }
 
-func TestCompressUncompressed(t *testing.T) {
+func TestCompressionUncompressed(t *testing.T) {
 	response := "{pi:3.14159265}"
 
 	recorder := httptest.NewRecorder()
@@ -103,12 +104,47 @@ func TestCompressUncompressed(t *testing.T) {
 	}
 }
 
-func TestCompressCompressedGzipPreferred(t *testing.T) {
+func TestCompressionSnappyPreferredOverGzipAndDeflate(t *testing.T) {
 	response := "{pi:3.14159265}"
 
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "/some/url", nil)
-	request.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	request.Header.Set("Accept-Encoding", "gzip, snappy, deflate, br")
+
+	handler := gohm.WithCompression(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if compression := r.Header.Get("Accept-Encoding"); compression != "" {
+			gohm.Error(w, fmt.Sprintf("ought to have removed `Accept-Encoding` request header: %q", compression), http.StatusBadRequest)
+			return
+		}
+		w.Write([]byte(response))
+	}))
+
+	handler.ServeHTTP(recorder, request)
+
+	if actual, expected := recorder.Code, http.StatusOK; actual != expected {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+
+	if actual, expected := recorder.Header().Get("Content-Encoding"), "snappy"; actual != expected {
+		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+
+	blob, err := ioutil.ReadAll(snappy.NewReader(recorder.Body))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if actual, expected := string(blob), response; actual != expected {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+}
+
+func TestCompressionGzipPreferredOverDeflate(t *testing.T) {
+	response := "{pi:3.14159265}"
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+	request.Header.Set("Accept-Encoding", "deflate, gzip, br")
 
 	handler := gohm.WithCompression(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if compression := r.Header.Get("Accept-Encoding"); compression != "" {
@@ -128,17 +164,17 @@ func TestCompressCompressedGzipPreferred(t *testing.T) {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
 	}
 
-	gz, err := gzip.NewReader(recorder.Body)
+	iorc, err := gzip.NewReader(recorder.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
-		if err := gz.Close(); err != nil {
+		if err := iorc.Close(); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
-	blob, err := ioutil.ReadAll(gz)
+	blob, err := ioutil.ReadAll(iorc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +184,7 @@ func TestCompressCompressedGzipPreferred(t *testing.T) {
 	}
 }
 
-func TestCompressCompressedDeflate(t *testing.T) {
+func TestCompressionDeflateWorks(t *testing.T) {
 	response := "{pi:3.14159265}"
 
 	recorder := httptest.NewRecorder()
@@ -173,14 +209,14 @@ func TestCompressCompressedDeflate(t *testing.T) {
 		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
 	}
 
-	gz := flate.NewReader(recorder.Body)
+	iorc := flate.NewReader(recorder.Body)
 	defer func() {
-		if err := gz.Close(); err != nil {
+		if err := iorc.Close(); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
-	blob, err := ioutil.ReadAll(gz)
+	blob, err := ioutil.ReadAll(iorc)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/golang/snappy"
 )
 
 type compressionResponseWriter struct {
@@ -59,7 +61,15 @@ func WithCompression(next http.Handler) http.Handler {
 
 		// Because many browsers include a buggy deflate compression algorithm,
 		// prefer `gzip` over `deflate` if both are acceptable.
-		if strings.Contains(ae, "gzip") {
+		if strings.Contains(ae, "snappy") {
+			newWriteCloser = snappy.NewBufferedWriter(w)
+			defer func() {
+				if err := newWriteCloser.Close(); err != nil {
+					Error(w, fmt.Sprintf("cannot compress stream using snappy: %s", err), http.StatusInternalServerError)
+				}
+			}()
+			w.Header().Set("Content-Encoding", "snappy")
+		} else if strings.Contains(ae, "gzip") {
 			newWriteCloser = gzip.NewWriter(w)
 			defer func() {
 				if err := newWriteCloser.Close(); err != nil {
