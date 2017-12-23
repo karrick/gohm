@@ -104,6 +104,9 @@ func WithCompression(next http.Handler) http.Handler {
 		}
 		r.Header.Del(requestHeaderName)
 		w.Header().Set(responseHeaderName, encodingName)
+		if responseHeaderName == "Content-Encoding" {
+			w.Header().Set("Vary", responseHeaderName)
+		}
 		next.ServeHTTP(compressionResponseWriter{ResponseWriter: w, compressionWriter: newWriteCloser}, r)
 	})
 }
