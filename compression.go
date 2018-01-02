@@ -61,7 +61,7 @@ func WithCompression(next http.Handler) http.Handler {
 		requestHeaderName := "TE"
 		acceptableEncodings := r.Header.Get(requestHeaderName)
 		if acceptableEncodings != "" {
-			// If transfer-encoding specified, then completely ignore
+			// If Transfer-Encoding specified, then completely ignore
 			// Accept-Encoding, because the upstream node has specifically
 			// requested a node-to-node transfer compression algorithm.
 			responseHeaderName = "Transfer-Encoding"
