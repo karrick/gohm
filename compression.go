@@ -50,12 +50,12 @@ func WithGzip(next http.Handler) http.Handler {
 }
 
 // WithCompression returns a new http.Handler that optionally compresses the
-// response text using either the snapper, gzip, or deflate compression
-// algorithm when the HTTP request's `Accept-Encoding` header includes the
-// string `snappy, `gzip`, or `deflate`. To prevent the downstream next
-// http.Handler from also seeing the `Accept-Encoding` request header, and
-// possibly also compressing the data a second time, this function removes that
-// header from the request.
+// response text using either the snappy, gzip, or deflate compression algorithm
+// when the HTTP request's `Accept-Encoding` header includes the string
+// `snappy`, `gzip`, or `deflate`. To prevent the downstream http.Handler from
+// also seeing the `Accept-Encoding` request header, and possibly also
+// compressing the data a second time, this function removes that header from
+// the request.
 //
 // NOTE: The specified next http.Handler ought not set `Content-Length` header,
 // or the reported length value will be wrong. As a matter of fact, all HTTP
