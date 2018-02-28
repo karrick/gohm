@@ -24,6 +24,9 @@ func (g compressionResponseWriter) Write(b []byte) (int, error) {
 // text using the gzip compression algorithm when the HTTP request's
 // `Accept-Encoding` header includes the string `gzip`.
 //
+// NOTE: The specified next http.Handler ought not set `Content-Length` header,
+// or the value reported will be wrong.
+//
 //	mux := http.NewServeMux()
 //	mux.Handle("/example/path", gohm.WithGzip(someHandler))
 func WithGzip(next http.Handler) http.Handler {
@@ -49,6 +52,9 @@ func WithGzip(next http.Handler) http.Handler {
 // `deflate`. To prevent the specified next http.Handler from also seeing the
 // `Accept-Encoding` request header, and possibly also compressing the data a
 // second time, this function removes that header from the request.
+//
+// NOTE: The specified next http.Handler ought not set `Content-Length` header,
+// or the value reported will be wrong.
 //
 //	mux := http.NewServeMux()
 //	mux.Handle("/example/path", gohm.WithCompression(someHandler))
