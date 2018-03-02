@@ -222,6 +222,18 @@ elides timeout protection, and `gohm` will wait forever for a
 downstream `http.Handler` to return.  It is recommended that a
 sensible timeout always be chosen for all production servers.
 
+### WithCompression
+
+`WithCompression` returns a new `http.Handler` that optionally
+compresses the response text using the snappy, gzip, or deflate
+compression algorithm when the HTTP request's `Accept-Encoding` header
+includes the string `snappy`, `gzip`, or `deflate`.
+
+```Go
+    mux := http.NewServeMux()
+    mux.Handle("/example/path", gohm.WithGzip(someHandler))
+```
+
 ### WithGzip
 
 `WithGzip` returns a new `http.Handler` that optionally compresses the
