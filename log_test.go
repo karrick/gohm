@@ -127,30 +127,43 @@ func TestLogWithFormatStatusEscapedCharacters(t *testing.T) {
 
 func TestLogWithFormatStatic(t *testing.T) {
 	format := "{client} {client-ip} {client-port} - \"{method} {uri} {proto}\" {status} {bytes}"
-	logOutput := new(bytes.Buffer)
 
-	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest("GET", "/some/url", nil)
+	t.Run("ipv4", func(t *testing.T) {
+		logOutput := new(bytes.Buffer)
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		request.RemoteAddr = "1.2.3.4:1234"
 
-	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gohm.Error(w, "some error", http.StatusForbidden)
-	}), gohm.Config{LogFormat: format, LogWriter: logOutput})
+		handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gohm.Error(w, "some error", http.StatusForbidden)
+		}), gohm.Config{LogFormat: format, LogWriter: logOutput})
 
-	handler.ServeHTTP(recorder, request)
+		handler.ServeHTTP(recorder, request)
 
-	// hardcoded test request remote address
-	client := request.RemoteAddr
-	clientIP := client
-	clientPort := client
-	if colon := strings.LastIndex(client, ":"); colon != -1 {
-		clientIP = client[:colon]
-		clientPort = client[colon+1:]
-	}
+		expected := fmt.Sprintf("1.2.3.4:1234 1.2.3.4 1234 - \"GET /some/url HTTP/1.1\" %d 26\n", http.StatusForbidden)
+		if actual := logOutput.String(); actual != expected {
+			t.Fatalf("\nGOT:\n\t%#v\nExpected:\n\t%#v", actual, expected)
+		}
+	})
 
-	expected := fmt.Sprintf("%s %s %s - \"GET /some/url HTTP/1.1\" %d 26\n", client, clientIP, clientPort, http.StatusForbidden)
-	if actual := logOutput.String(); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
-	}
+	t.Run("ipv6", func(t *testing.T) {
+		logOutput := new(bytes.Buffer)
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		request.RemoteAddr = "[::1]:1234"
+
+		handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gohm.Error(w, "some error", http.StatusForbidden)
+		}), gohm.Config{LogFormat: format, LogWriter: logOutput})
+
+		handler.ServeHTTP(recorder, request)
+
+		expected := fmt.Sprintf("[::1]:1234 ::1 1234 - \"GET /some/url HTTP/1.1\" %d 26\n", http.StatusForbidden)
+		if actual := logOutput.String(); actual != expected {
+			t.Fatalf("\nGOT:\n\t%#v\nExpected:\n\t%#v", actual, expected)
+		}
+	})
+
 }
 
 func TestLogWithFormatIgnoresInvalidTokens(t *testing.T) {

@@ -1,6 +1,7 @@
 package gohm
 
 import (
+	"bytes"
 	"net/http"
 	"strconv"
 	"strings"
@@ -186,10 +187,16 @@ func clientEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
 }
 
 func clientIPEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
-	value := r.RemoteAddr // ip:port
-	if colon := strings.LastIndex(value, ":"); colon != -1 {
+	value := []byte(r.RemoteAddr) // "ipv4:port", or "[ipv6]:port"
+	// strip port
+	if colon := bytes.LastIndexByte(value, ':'); colon != -1 {
 		value = value[:colon]
 	}
+	// strip square brackets
+	if l := len(value); l > 2 && value[0] == '[' && value[l-1] == ']' {
+		value = value[1 : l-1]
+	}
+	// append remaining bytes
 	*bb = append(*bb, value...)
 }
 
