@@ -1,0 +1,76 @@
+package gohm
+
+import (
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+func StaticHandler2(virtualRoot, fileSystemRoot string) http.Handler {
+	log.Printf("[DEBUG] static handler: virtual root: %q; file system root: %q\n", virtualRoot, fileSystemRoot)
+
+	fileServingHandler := http.FileServer(http.Dir(fileSystemRoot))
+
+	const requestHeader = "Accept-Encoding"
+	const responseHeader = "Content-Encoding"
+
+	types := []struct {
+		name, suffix string
+	}{
+		{"gzip", ".gz"},
+		{"flubber", ".fl"},
+	}
+
+	return http.StripPrefix(virtualRoot, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/") {
+			Error(w, r.URL.Path, http.StatusForbidden)
+			return
+		}
+
+		acceptableEncodings := r.Header.Get(requestHeader)
+		if acceptableEncodings == "" {
+			fileServingHandler.ServeHTTP(w, r)
+			return
+		}
+
+		for _, ty := range types {
+			if strings.Contains(acceptableEncodings, ty.name) {
+				log.Printf("[DEBUG] requested: %q", ty.name)
+				stub := filepath.Join(fileSystemRoot, r.URL.Path)
+				pathname := filepath.Join(fileSystemRoot, r.URL.Path+ty.suffix)
+				fh, err := os.Open(pathname)
+				if err != nil {
+					continue
+				}
+				log.Printf("[DEBUG] pathname: %q", pathname)
+				// fi, err := fh.Stat()
+				// if err != nil {
+				// 	_ = fh.Close()
+				// 	continue
+				// }
+				// log.Printf("[DEBUG] %#v", fi)
+                w.Header().Set(responseHeader, ty.name)
+
+				// determine content type
+
+				if _, err2 := io.Copy(w, fh); err == nil {
+					err = err2
+				}
+				if err2 := fh.Close(); err == nil {
+					err = err2
+				}
+				if err != nil {
+					Error(w, r.URL.Path+": "+err.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+		}
+
+		// Could not find a pre-compressed file that matches the requested compression algorithm.
+		// TODO: Consider compressing on the fly...
+		fileServingHandler.ServeHTTP(w, r)
+	}))
+}
