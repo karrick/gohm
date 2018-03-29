@@ -22,9 +22,9 @@ Here is a simple example:
 
 ```Go
 func main() {
-	optPort := golf.IntP('p', "port", 8080, "HTTP server network port")
-	optStatic := golf.StringP('s', "static", "static", "filesystem pathname to static virtual root")
-	golf.Parse()
+	optPort := flag.Int("port", 8080, "HTTP server network port")
+	optStatic := flag.String("static", "static", "filesystem pathname to static virtual root")
+	flag.Parse()
 
 	*optStatic = filepath.Clean(*optStatic)
 
@@ -34,7 +34,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// static resources
-	mux.Handle("/static/", gohm.ForbidDirectories(gohm.StaticHandler("/static/", *optStatic)))
+	mux.Handle("/static/", gohm.StaticHandler("/static/", *optStatic))
 
 	// default handler serves index page for empty URI, "/", but 404 for
 	// everything else.
@@ -71,13 +71,12 @@ var (
 )
 
 func main() {
-	optStatic := golf.StringP('s', "static", "static", "filesystem pathname to static virtual root")
-	golf.Parse()
+	optStatic := flag.String("static", "static", "filesystem pathname to static virtual root")
+	flag.Parse()
 
 	*optStatic = filepath.Clean(*optStatic)
 
-    h := gohm.ForbidDirectories(gohm.StaticHandler("/static/", *optStatic))
-    h = gohm.WithCompression(h) // compress response if client accepts it
+    h := gohm.WithCompression(gohm.StaticHandler("/static/", *optStatic))
 
     // gohm was designed to wrap other http.Handler functions.
     h = gohm.New(h, gohm.Config{
@@ -251,7 +250,8 @@ includes the string `snappy`, `gzip`, or `deflate`.
 
 ```Go
     mux := http.NewServeMux()
-    mux.Handle("/example/path", gohm.WithGzip(someHandler))
+    staticPath := "static"
+    mux.Handle("/static/", gohm.WithCompression(gohm.StaticHandler("/static/", staticPath)))
 ```
 
 ### WithGzip
