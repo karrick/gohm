@@ -22,16 +22,33 @@ Here is a simple example:
 
 ```Go
 func main() {
-    h := http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
+	optPort := golf.IntP('p', "port", 8080, "HTTP server network port")
+	optStatic := golf.StringP('s', "static", "static", "filesystem pathname to static virtual root")
+	golf.Parse()
 
-    // gzip response if client accepts gzip encoding
-    h = gohm.WithGzip(h)
+	*optStatic = filepath.Clean(*optStatic)
 
-    // panic & timeout protection, error handling, and logging
-    h = gohm.New(h, gohm.Config{Timeout: time.Second})
+	// create mux rather than using http.DefaultServeMux so we can later wrap it
+	// with gohm.New to provide logging, error handling, along with panic and
+	// timeout protection.
+	mux := http.NewServeMux()
 
-    http.Handle("/static/", h)
-    log.Fatal(http.ListenAndServe(":8080", nil))
+	// static resources
+	mux.Handle("/static/", gohm.ForbidDirectories(gohm.StaticHandler("/static/", *optStatic)))
+
+	// default handler serves index page for empty URI, "/", but 404 for
+	// everything else.
+	mux.Handle("/", gohm.DefaultHandler(filepath.Join(*optStatic, "index.html")))
+
+	log.Print("[INFO] web service port: ", *optPort)
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", *optPort),
+		Handler: gohm.New(gohm.WithCompression(mux), gohm.Config{Timeout: time.Second}),
+	}
+
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatal("[ERROR] ", err)
+	}
 }
 ```
 
@@ -54,10 +71,13 @@ var (
 )
 
 func main() {
+	optStatic := golf.StringP('s', "static", "static", "filesystem pathname to static virtual root")
+	golf.Parse()
 
-    h := http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
+	*optStatic = filepath.Clean(*optStatic)
 
-    h = gohm.WithGzip(h) // gzip response if client accepts gzip encoding
+    h := gohm.ForbidDirectories(gohm.StaticHandler("/static/", *optStatic))
+    h = gohm.WithCompression(h) // compress response if client accepts it
 
     // gohm was designed to wrap other http.Handler functions.
     h = gohm.New(h, gohm.Config{
