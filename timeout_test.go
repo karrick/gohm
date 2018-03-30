@@ -11,71 +11,102 @@ import (
 	"github.com/karrick/gohm"
 )
 
-func TestBeforeTimeout(t *testing.T) {
+func TestWithTimeoutWhenNoTimeout(t *testing.T) {
+	req := httptest.NewRequest("GET", "/some/url", nil)
+
 	response := "{pi:3.14159265}"
 
-	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest("GET", "/some/url", nil)
-
-	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.WithTimeout(time.Second, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(response))
-	}), gohm.Config{Timeout: time.Second})
+	}))
 
-	handler.ServeHTTP(recorder, request)
+	rr := httptest.NewRecorder()
 
-	resp := recorder.Result()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	handler.ServeHTTP(rr, req)
 
-	if actual, expected := resp.StatusCode, http.StatusOK; actual != expected {
+	if actual, expected := rr.Code, http.StatusOK; actual != expected {
 		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
 	}
 
-	if actual, expected := string(body), response; actual != expected {
+	if actual, expected := rr.Body.String(), response; actual != expected {
 		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
 	}
 }
 
-func TestAfterTimeout(t *testing.T) {
+func TestWithTimeoutWhenTimeout(t *testing.T) {
+	req := httptest.NewRequest("GET", "/some/url", nil)
+
 	response := "{pi:3.14159265}"
 
-	recorder := httptest.NewRecorder()
-	request := httptest.NewRequest("GET", "/some/url", nil)
-
-	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := gohm.WithTimeout(10*time.Millisecond, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(time.Second)
 		w.Write([]byte(response))
-	}), gohm.Config{Timeout: 5 * time.Millisecond})
+	}))
 
-	handler.ServeHTTP(recorder, request)
+	rr := httptest.NewRecorder()
 
-	resp := recorder.Result()
+	handler.ServeHTTP(rr, req)
+
+	if actual, expected := rr.Code, http.StatusServiceUnavailable; actual != expected {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+
+	if actual, expected := rr.Body.String(), "503 Service Unavailable"; !strings.Contains(actual, expected) {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+}
+
+func TestWithTimeoutWhenPanic(t *testing.T) {
+	req := httptest.NewRequest("GET", "/some/url", nil)
+
+	handler := gohm.WithTimeout(5*time.Second, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic("test error")
+	}))
+
+	rr := httptest.NewRecorder()
+
+	panicked := false
+	served := make(chan struct{})
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicked = true
+			}
+			close(served)
+		}()
+		handler.ServeHTTP(rr, req)
+	}()
+
+	<-served
+
+	resp := rr.Result()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if actual, expected := resp.StatusCode, http.StatusServiceUnavailable; actual != expected {
+	if actual, expected := panicked, true; actual != expected {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+	// NOTE: Cannot verify resp.StatusCode because httptest.ResponseRecorder initializes StatusCode to http.StatusOK
+	// if actual, expected := resp.StatusCode, http.StatusInternalServerError; actual != expected {
+	// 	t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	// }
+	if actual, expected := string(body), ""; actual != expected {
 		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
 	}
 
-	if actual, expected := string(body), "503 Service Unavailable"; !strings.Contains(actual, expected) {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
-	}
 }
 
 func BenchmarkWithTimeout(b *testing.B) {
-	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// don't bother exceeding timeout
-	}), gohm.Config{Timeout: time.Second})
+	handler := gohm.WithTimeout(time.Minute, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		recorder := httptest.NewRecorder()
-		request := httptest.NewRequest("GET", "/some/url", nil)
-		handler.ServeHTTP(recorder, request)
+		rr := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(rr, req)
 	}
 }

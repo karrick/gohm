@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/golang/snappy"
-	"github.com/karrick/gohm"
+	"github.com/karrick/gohm/v2"
 )
 
 func TestGzipUncompressed(t *testing.T) {

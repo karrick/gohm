@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/karrick/gohm"
+	"github.com/karrick/gohm/v2"
 )
 
 // when error called, status updated, client receives message

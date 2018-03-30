@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/karrick/gohm"
+	"github.com/karrick/gohm/v2"
 )
 
 func testCounter(t *testing.T, status int) gohm.Counters {
