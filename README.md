@@ -7,6 +7,19 @@ gohm is a tiny Go library with HTTP middleware functions.
 Documentation is available via
 [![GoDoc](https://godoc.org/github.com/karrick/gohm?status.svg)](https://godoc.org/github.com/karrick/gohm).
 
+### Versions
+
+The first version of this library is at the top-level of this
+repository, available for software to build against, but no longer
+supported. Clients of this library ought consider updating to version
+two of the interface, located in the `v2` subdirectory. All the below
+examples along with the programs in the `examples` subdirectory are
+built with v2 of this library.
+
+Both the v1 and v2 versions of this library can be built using either
+the version agnostic go build tools, or the version sensitive go build
+tools.
+
 ## Description
 
 `gohm` provides a small collection of HTTP middleware functions to be
@@ -21,6 +34,18 @@ are always created for production code.
 Here is a simple example:
 
 ```Go
+package main
+
+import (
+    "flag"
+    "fmt"
+    "log"
+    "net/http"
+    "path/filepath"
+    
+    gohm "github.com/karrick/gohm/v2"
+)
+
 func main() {
 	optPort := flag.Int("port", 8080, "HTTP server network port")
 	optStatic := flag.String("static", "static", "filesystem pathname to static virtual root")
