@@ -9,27 +9,52 @@ Documentation is available via
 
 ### Versions
 
-The first version of this library is at the top-level of this
-repository, available for software to build against, but no longer
-supported. Clients of this library ought consider updating to version
-two of the interface, located in the `v2` subdirectory. All the below
-examples along with the programs in the `examples` subdirectory are
-built with v2 of this library.
+It is customary to use semantic versioning to tag project releases. This library
+received a v2.x.y tag one year ago today--as this comment is being written--and
+there are a few packages which depend on v2.x.y version of this package.
 
-Both the v1 and v2 versions of this library can be built using either
-the version agnostic go build tools, or the version sensitive go build
-tools.
+Recently a number of blog postings by Russ Cox proposed and described a version
+aware `go build` tool-chain, where one of its requirements was that in order to
+maintain version 1 compatibility for upstream users of a library, source code
+for version 1 of a project ought to remain in the top-level of the package
+repository. Furthermore, version 2 of a library ought to be placed in its own
+package by having its source code located in a `v2/` subdirectory from the
+top-level of the project's repository.
+
+In order to support other projects with a pinned dependency that happens to have
+this package as a transitive dependency, yet does not itself pin this package
+version, a snapshot of today's source code for version 2 of this project is made
+available in the top-level of the repository. Additional development work in the
+project will continue in the `v2/` subdirectory, and users are encouraged to
+import that version in their projects:
+
+#### To use the newest features of this library
+
+```Go
+import gohm "github.com/karrick/gohm/v2"
+```
+
+#### To use the features of this library available as of 2018-04-04
+
+```Go
+import gohm "github.com/karrick/gohm/v2"
+```
+
+#### To use version 1 of this library
+
+```Go
+import gohm "gopkg.in/karrick/gohm.v1"
+```
 
 ## Description
 
-`gohm` provides a small collection of HTTP middleware functions to be
-used when creating a Go micro webservice.  With the exception of
-handler timeout control, all of the configuration options have
-sensible defaults, so an empty `gohm.Config{}` object may be used to
-initialize the `http.Handler` wrapper to start, and further
-customization is possible down the road.  Using the default handler
-timeout elides timeout protection, so it's recommended that timeouts
-are always created for production code.
+`gohm` provides a small collection of HTTP middleware functions to be used when
+creating a Go micro webservice.  With the exception of handler timeout control,
+all of the configuration options have sensible defaults, so an empty
+`gohm.Config{}` object may be used to initialize the `http.Handler` wrapper to
+start, and further customization is possible down the road.  Using the default
+handler timeout elides timeout protection, so it's recommended that timeouts are
+always created for production code.
 
 Here is a simple example:
 
@@ -117,22 +142,20 @@ func main() {
 }
 ```
 
-In the above example notice that each successive line wraps the
-handler of the line above it.  The terms upstream and downstream do
-not refer to which line was above which other line in the source code.
-Rather, upstream handlers invoke downstream handlers.  In both of the
-above examples, the top level handler is `gohm`, which is upstream of
-`gohm.WithGzip`, which in turn is upstream of `http.StripPrefix`,
-which itself is upstream of `http.FileServer`, which finally is
-upstream of `http.Dir`.
+In the above example notice that each successive line wraps the handler of the
+line above it.  The terms upstream and downstream do not refer to which line was
+above which other line in the source code.  Rather, upstream handlers invoke
+downstream handlers.  In both of the above examples, the top level handler is
+`gohm`, which is upstream of `gohm.WithGzip`, which in turn is upstream of
+`http.StripPrefix`, which itself is upstream of `http.FileServer`, which finally
+is upstream of `http.Dir`.
 
-As another illustration, the following two example functions are
-equivalent, and both invoke `handlerA` to perform some setup then
-invoke `handlerB`, which performs its setup work, and finally invokes
-`handlerC`.  Both do the same thing, but source code looks vastly
-different.  In both cases, `handlerA` is considered upstream from
-`handlerB`, which is considered upstream of `handlerC`.  Similarly,
-`handlerC` is downstream of `handlerB`, which is likewise downstream
+As another illustration, the following two example functions are equivalent, and
+both invoke `handlerA` to perform some setup then invoke `handlerB`, which
+performs its setup work, and finally invokes `handlerC`.  Both do the same
+thing, but source code looks vastly different.  In both cases, `handlerA` is
+considered upstream from `handlerB`, which is considered upstream of `handlerC`.
+Similarly, `handlerC` is downstream of `handlerB`, which is likewise downstream
 of `handlerA`.
 
 ```Go
@@ -151,15 +174,14 @@ func example2() {
 
 ### Error
 
-`Error` formats and emits the specified error message text and status
-code information to the `http.ResponseWriter`, to be consumed by the
-client of the service.  This particular helper function has nothing to
-do with emitting log messages on the server side, and only creates a
-response for the client.  However, if a handler that invokes
-`gohm.Error` is wrapped with logging functionality by `gohm.New`, then
-`gohm` will also emit a sensible log message based on the specified
-status code and message text.  Typically handlers will call this
-method prior to invoking return to return to whichever handler invoked
+`Error` formats and emits the specified error message text and status code
+information to the `http.ResponseWriter`, to be consumed by the client of the
+service.  This particular helper function has nothing to do with emitting log
+messages on the server side, and only creates a response for the client.
+However, if a handler that invokes `gohm.Error` is wrapped with logging
+functionality by `gohm.New`, then `gohm` will also emit a sensible log message
+based on the specified status code and message text.  Typically handlers will
+call this method prior to invoking return to return to whichever handler invoked
 it.
 
 ```Go
@@ -181,19 +203,17 @@ func onlyGet(next http.Handler) http.Handler {
 
 ### New
 
-`New` returns a new `http.Handler` that calls the specified next
-`http.Handler`, and performs the requested operations before and after
-the downstream handler as specified by the `gohm.Config` structure
-passed to it.
+`New` returns a new `http.Handler` that calls the specified next `http.Handler`,
+and performs the requested operations before and after the downstream handler as
+specified by the `gohm.Config` structure passed to it.
 
-It receives a `gohm.Config` instance rather than a pointer to one, to
-discourage modification after creating the `http.Handler`.  With the
-exception of handler timeout control, all of the configuration options
-have sensible defaults, so an empty `gohm.Config{}` object may be used
-to initialize the `http.Handler` wrapper to start, and further
-customization is possible down the road.  Using the default handler
-timeout elides timeout protection, so it's recommended that timeouts
-are always created for production code.  Documentation of the
+It receives a `gohm.Config` instance rather than a pointer to one, to discourage
+modification after creating the `http.Handler`.  With the exception of handler
+timeout control, all of the configuration options have sensible defaults, so an
+empty `gohm.Config{}` object may be used to initialize the `http.Handler`
+wrapper to start, and further customization is possible down the road.  Using
+the default handler timeout elides timeout protection, so it's recommended that
+timeouts are always created for production code.  Documentation of the
 `gohm.Config` structure provides additional details for the supported
 configuration fields.
 
@@ -201,27 +221,24 @@ configuration fields.
 
 ##### AllowPanics
 
-`AllowPanics`, when set to true, causes panics to propagate from
-downstream handlers.  When set to false, also the default value,
-panics will be converted into Internal Server Errors (status code
-500).  You cannot change this setting after creating the
-`http.Handler`.
+`AllowPanics`, when set to true, causes panics to propagate from downstream
+handlers.  When set to false, also the default value, panics will be converted
+into Internal Server Errors (status code 500).  You cannot change this setting
+after creating the `http.Handler`.
 
 ##### Counters
 
-`Counters`, if not nil, tracks counts of handler response status
-codes.
+`Counters`, if not nil, tracks counts of handler response status codes.
 
 ##### LogBitmask
 
-The `LogBitmask` parameter is used to specify which HTTP requests
-ought to be logged based on the HTTP status code returned by the
-downstream `http.Handler`.
+The `LogBitmask` parameter is used to specify which HTTP requests ought to be
+logged based on the HTTP status code returned by the downstream `http.Handler`.
 
 ##### LogFormat
 
-The following format directives are supported.  All times provided are
-converted to UTC before formatting.
+The following format directives are supported.  All times provided are converted
+to UTC before formatting.
 
     begin-epoch:     time request received (epoch)
     begin-iso8601:   time request received (ISO-8601 time format)
@@ -241,11 +258,11 @@ converted to UTC before formatting.
     status-text:     response status text
     uri:             request URI
 
-In addition, values from HTTP request headers can also be included in
-the log by prefixing the HTTP header name with `http-`.  In the below
-example, each log line will begin with the value of the HTTP request
-header `CLIENT-IP`.  If the specified request header is not present, a
-hyphen will be used in place of the non-existant value.
+In addition, values from HTTP request headers can also be included in the log by
+prefixing the HTTP header name with `http-`.  In the below example, each log
+line will begin with the value of the HTTP request header `CLIENT-IP`.  If the
+specified request header is not present, a hyphen will be used in place of the
+non-existant value.
 
 ```Go
 format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {status} {bytes} {duration}"
@@ -253,25 +270,24 @@ format := "{http-CLIENT-IP} {http-USER} [{end}] \"{method} {uri} {proto}\" {stat
 
 ##### LogWriter
 
-`LogWriter`, if not nil, specifies that log lines ought to be written
-to the specified `io.Writer`.  You cannot change the `io.Writer` to
-which logs are written after creating the `http.Handler`.
+`LogWriter`, if not nil, specifies that log lines ought to be written to the
+specified `io.Writer`.  You cannot change the `io.Writer` to which logs are
+written after creating the `http.Handler`.
 
 ##### Timeout
 
-`Timeout`, when not 0, specifies the amount of time allotted to wait
-for downstream `http.Handler` response.  You cannot change the handler
-timeout after creating the `http.Handler`.  The zero value for Timeout
-elides timeout protection, and `gohm` will wait forever for a
-downstream `http.Handler` to return.  It is recommended that a
-sensible timeout always be chosen for all production servers.
+`Timeout`, when not 0, specifies the amount of time allotted to wait for
+downstream `http.Handler` response.  You cannot change the handler timeout after
+creating the `http.Handler`.  The zero value for Timeout elides timeout
+protection, and `gohm` will wait forever for a downstream `http.Handler` to
+return.  It is recommended that a sensible timeout always be chosen for all
+production servers.
 
 ### WithCompression
 
-`WithCompression` returns a new `http.Handler` that optionally
-compresses the response text using the snappy, gzip, or deflate
-compression algorithm when the HTTP request's `Accept-Encoding` header
-includes the string `snappy`, `gzip`, or `deflate`.
+`WithCompression` returns a new `http.Handler` that optionally compresses the
+response text using the gzip or deflate compression algorithm when the HTTP
+request's `Accept-Encoding` header includes the string `gzip` or `deflate`.
 
 ```Go
     mux := http.NewServeMux()
@@ -281,9 +297,9 @@ includes the string `snappy`, `gzip`, or `deflate`.
 
 ### WithGzip
 
-`WithGzip` returns a new `http.Handler` that optionally compresses the
-response text using the gzip compression algorithm when the HTTP
-request's `Accept-Encoding` header includes the string `gzip`.
+`WithGzip` returns a new `http.Handler` that optionally compresses the response
+text using the gzip compression algorithm when the HTTP request's
+`Accept-Encoding` header includes the string `gzip`.
 
 ```Go
     mux := http.NewServeMux()

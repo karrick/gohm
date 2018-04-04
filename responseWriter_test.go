@@ -9,16 +9,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/karrick/gohm"
+	"github.com/karrick/gohm/v2"
 )
 
 func TestResponseWriter(t *testing.T) {
 	status := http.StatusCreated
 	response := "some response"
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/some/url", nil)
 
-	handler := gohm.WithTimeout(time.Minute, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+
+	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		header := w.Header()
 		header.Add("foo", "foo1")
@@ -26,11 +27,11 @@ func TestResponseWriter(t *testing.T) {
 		header.Add("bar", "bar1")
 		header.Add("bar", "bar2")
 		w.Write([]byte(response))
-	}))
+	}), gohm.Config{})
 
-	handler.ServeHTTP(rr, req)
+	handler.ServeHTTP(recorder, request)
 
-	resp := rr.Result()
+	resp := recorder.Result()
 
 	if actual, expected := resp.StatusCode, status; actual != expected {
 		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
@@ -72,43 +73,27 @@ func TestResponseWriter(t *testing.T) {
 	}
 }
 
-func TestResponseWriterWhenPanic(t *testing.T) {
-	req := httptest.NewRequest("GET", "/some/url", nil)
+func TestResponseWriterWhenWriteHeaderErrorStatus(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
 
-	handler := gohm.WithTimeout(5*time.Second, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		panic("test error")
-	}))
+	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}), gohm.Config{})
 
-	rr := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
 
-	panicked := false
-	served := make(chan struct{})
-
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				panicked = true
-			}
-			close(served)
-		}()
-		handler.ServeHTTP(rr, req)
-	}()
-
-	<-served
-
-	resp := rr.Result()
+	resp := recorder.Result()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if actual, expected := panicked, true; actual != expected {
+	// status code ought to have been sent to client
+	if actual, expected := resp.StatusCode, http.StatusForbidden; actual != expected {
 		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
 	}
-	// NOTE: Cannot verify resp.StatusCode because httptest.ResponseRecorder initializes StatusCode to http.StatusOK
-	// if actual, expected := resp.StatusCode, http.StatusInternalServerError; actual != expected {
-	// 	t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
-	// }
+	// but when only invoke WriteHeader, nothing gets written to client
 	if actual, expected := string(body), ""; actual != expected {
 		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
 	}
@@ -120,20 +105,38 @@ func BenchmarkWithoutResponseWriter(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/some/url", nil)
-		handler.ServeHTTP(rr, req)
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(recorder, request)
 	}
 }
 
-func BenchmarkWithCloseNotifier(b *testing.B) {
-	handler := gohm.WithCloseNotifier(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+func BenchmarkWithDefaultResponseWriter(b *testing.B) {
+	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}), gohm.Config{})
 
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		rr := httptest.NewRecorder()
-		req := httptest.NewRequest("GET", "/some/url", nil)
-		handler.ServeHTTP(rr, req)
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(recorder, request)
+	}
+}
+
+func BenchmarkWithFullResponseWriter(b *testing.B) {
+	var counters gohm.Counters
+
+	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}), gohm.Config{
+		Counters:  &counters,
+		LogWriter: ioutil.Discard,
+		Timeout:   time.Second,
+	})
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/some/url", nil)
+		handler.ServeHTTP(recorder, request)
 	}
 }

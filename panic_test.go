@@ -1,52 +1,91 @@
 package gohm_test
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
-	"github.com/karrick/gohm"
+	"github.com/karrick/gohm/v2"
 )
 
-func TestConvertPanicsToErrorsWhenNoPanic(t *testing.T) {
-	req := httptest.NewRequest("GET", "/some/url", nil)
+func TestAllowPanicsFalse(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
 
-	response := "nothing special"
-	status := http.StatusOK
+	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic("test error")
+	}), gohm.Config{})
 
-	handler := gohm.ConvertPanicsToErrors(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(response))
-	}))
+	var panicked bool
+	served := make(chan struct{})
 
-	rr := httptest.NewRecorder()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicked = true
+			}
+			close(served)
+		}()
+		handler.ServeHTTP(recorder, request)
+	}()
 
-	handler.ServeHTTP(rr, req)
+	<-served
 
-	if actual, expected := rr.Code, status; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	resp := recorder.Result()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	if actual, expected := rr.Body.String(), response; actual != expected {
+	if actual, expected := panicked, false; actual != expected {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+	if actual, expected := resp.StatusCode, http.StatusInternalServerError; actual != expected {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+	if actual, expected := string(body), "500 Internal Server Error"; !strings.Contains(actual, expected) {
 		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
 	}
 }
 
-func TestConvertPanicsToErrorsWhenPanic(t *testing.T) {
-	req := httptest.NewRequest("GET", "/some/url", nil)
+func TestAllowPanicsTrue(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
 
-	handler := gohm.ConvertPanicsToErrors(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		panic("some horrible event took place")
-	}))
+	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic("test error")
+	}), gohm.Config{AllowPanics: true})
 
-	rr := httptest.NewRecorder()
+	var panicked bool
+	served := make(chan struct{})
 
-	handler.ServeHTTP(rr, req)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				panicked = true
+			}
+			close(served)
+		}()
+		handler.ServeHTTP(recorder, request)
+	}()
 
-	if actual, expected := rr.Code, http.StatusInternalServerError; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	<-served
+
+	resp := recorder.Result()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	if actual, expected := rr.Body.String(), "500 Internal Server Error: some horrible event took place\n"; actual != expected {
+	if actual, expected := panicked, true; actual != expected {
+		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	}
+	// NOTE: Cannot verify resp.StatusCode because httptest.ResponseRecorder
+	// initializes StatusCode to http.StatusOK if not written, even though it is
+	// never set.
+	if actual, expected := string(body), ""; actual != expected {
 		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
 	}
 }
