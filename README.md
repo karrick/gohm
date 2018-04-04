@@ -37,7 +37,7 @@ import gohm "github.com/karrick/gohm/v2"
 #### To use the features of this library available as of 2018-04-04
 
 ```Go
-import gohm "github.com/karrick/gohm/v2"
+import "github.com/karrick/gohm"
 ```
 
 #### To use version 1 of this library
