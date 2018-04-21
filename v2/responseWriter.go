@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"context"
 	"net/http"
+	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/karrick/gorill"
 )
 
 // responseWriter must behave exactly like http.ResponseWriter, yet store up
@@ -127,6 +130,45 @@ func New(next http.Handler, config Config) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var er *gorill.EscrowReader
+
+		if config.EscrowReader {
+			var bb *bytes.Buffer
+			if config.BufPool != nil {
+				// Obtain a bytes.Buffer from the buffer pool, but use defer to
+				// return the used buffer to the pool because we cannot control
+				// whether the specified next http.Handler or callback function
+				// will panic.
+				bb = config.BufPool.Get()
+				defer config.BufPool.Put(bb)
+			}
+
+			// Only pre-allocate buffer when the Content-Length parses. It would
+			// be really nice to provide some signaling mechanism to the next
+			// handler when the Content-Length fails to parse, but I suppose if
+			// it cares, it will also check the same thing.
+			if contentLengthString := r.Header.Get("Content-Length"); contentLengthString != "" {
+				if contentLength, err := strconv.Atoi(contentLengthString); err == nil {
+					if bb != nil {
+						// Ensure existing buffer is large enough to read
+						// Content-Length bytes.
+						bb.Grow(contentLength)
+					} else {
+						// Pre-allocate a buffer large enough to read
+						// Content-Length bytes.
+						bb = bytes.NewBuffer(make([]byte, 0, contentLength))
+					}
+				}
+			}
+
+			// Update the original request's Body to point to a newly created
+			// structure, from which the next handler may read the request body,
+			// and from which the callback may also read the request body if
+			// required.
+			er = gorill.NewEscrowReader(r.Body, bb)
+			r.Body = er
+		}
+
 		// Create a responseWriter to pass to next.ServeHTTP and collect
 		// downstream handler's response to query.  It will eventually be used
 		// to flush to the client, assuming neither the handler panics, nor the
@@ -157,9 +199,7 @@ func New(next http.Handler, config Config) http.Handler {
 		r = r.WithContext(ctx)
 		defer cancel()
 
-		if config.LogWriter != nil {
-			rw.begin = time.Now()
-		}
+		rw.begin = time.Now()
 
 		// We must invoke downstream handler in separate goroutine in order to
 		// ensure this handler only responds to one of the three events below,
@@ -202,6 +242,7 @@ func New(next http.Handler, config Config) http.Handler {
 			// payload back
 		}
 
+		rw.end = time.Now()
 		statusClass := rw.status / 100
 
 		// Update status counters
@@ -210,13 +251,24 @@ func New(next http.Handler, config Config) http.Handler {
 			atomic.AddUint64(&config.Counters.counters[statusClass], 1) // 1xx, 2xx, 3xx, 4xx, 5xx
 		}
 
+		// Invoke callback if provided, prior to logging request.
+		if config.Callback != nil {
+			stats := &Statistics{
+				RequestBegin:   rw.begin,
+				ResponseStatus: rw.status,
+				ResponseEnd:    rw.end,
+			}
+			if er != nil {
+				stats.RequestBody = er.Bytes()
+			}
+			config.Callback(stats)
+		}
+
 		// Update log
 		if config.LogWriter != nil {
 			var bit uint32 = 1 << uint32(statusClass-1)
 
 			if (atomic.LoadUint32(config.LogBitmask))&bit > 0 {
-				rw.end = time.Now()
-
 				buf := make([]byte, 0, 128)
 				for _, emitter := range emitters {
 					emitter(rw, r, &buf)

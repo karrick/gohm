@@ -1,6 +1,7 @@
 package gohm
 
 import (
+	"bytes"
 	"io"
 	"time"
 )
@@ -14,8 +15,25 @@ type Config struct {
 	// change this setting after creating the http.Handler.
 	AllowPanics bool
 
+	// BufPool, when not nil, specifies a free-list pool of buffers to be used
+	// to reduce garbage collection by reusing bytes.Buffer instances.
+	BufPool BytesBufferPool
+
+	// Callback, when not nil, is called after completion of each request with a
+	// structure holding request and response information.
+	Callback func(*Statistics)
+
 	// Counters, if not nil, tracks counts of handler response status codes.
 	Counters *Counters
+
+	// EscrowReader specifies whether the middleware ought to provide an escrow
+	// reader for the request body. The escrow reader reads the body exactly
+	// once, storing the payload in a buffer, from which the downstream request
+	// handler reads the data as it normally would, but also where an optional
+	// Callback function might be able to have access to the request body
+	// payload. When false, the specified Callback will return a nil for the
+	// Statistics.ResponseBody.
+	EscrowReader bool
 
 	// LogBitmask, if not nil, specifies a bitmask to use to determine which
 	// HTTP status classes ought to be logged.  If not set, all HTTP requests
@@ -70,4 +88,28 @@ type Config struct {
 	// `http.Handler` to return.  It is recommended that a sensible timeout
 	// always be chosen for all production servers.
 	Timeout time.Duration
+}
+
+// BytesBufferPool specifies any structure that can provide bytes.Buffer
+// instances from a pool. One such performant and well-tested implementation for
+// a free-list of buffers is https://github.com/karrick/gobp
+type BytesBufferPool interface {
+	Get() *bytes.Buffer
+	Put(*bytes.Buffer)
+}
+
+// Statistics structures are passed to callback functions after the downstream
+// handler has completed services the request.
+type Statistics struct {
+	// RequestBegin is the time the request handling began.
+	RequestBegin time.Time
+
+	// RequestBody is the byte slice of the request body, if applicable.
+	RequestBody []byte
+
+	// ResponseStatus is the status code of the response.
+	ResponseStatus int
+
+	// ResponseEnd is the time response writing completed.
+	ResponseEnd time.Time
 }

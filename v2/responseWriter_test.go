@@ -1,14 +1,17 @@
 package gohm_test
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/karrick/gobp"
 	"github.com/karrick/gohm/v2"
 )
 
@@ -138,5 +141,62 @@ func BenchmarkWithFullResponseWriter(b *testing.B) {
 		recorder := httptest.NewRecorder()
 		request := httptest.NewRequest("GET", "/some/url", nil)
 		handler.ServeHTTP(recorder, request)
+	}
+}
+
+func TestEscrowTestBodyNoErrors(t *testing.T) {
+	const payload = "flubber"
+
+	var handlerReadPayload []byte
+
+	// origingalHandler is the http.Handler that normally handles a particular
+	// request. It needs to be able to read then close the request body.
+	originalHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handlerReadPayload, _ = ioutil.ReadAll(r.Body)
+		w.WriteHeader(http.StatusBadRequest)
+	})
+
+	var callbackBegin, callbackEnd time.Time
+	var callbackBody []byte
+	var callbackStatus int
+
+	// wrapper wraps the original http.Handler, providing a callback that is
+	// invoked upon completion of the original request http.Handler.
+	wrapper := gohm.New(originalHandler, gohm.Config{
+		BufPool: new(gobp.Pool),
+		Callback: func(stats *gohm.Statistics) {
+			callbackBegin = stats.RequestBegin
+			callbackBody = stats.RequestBody
+			callbackStatus = stats.ResponseStatus
+			callbackEnd = stats.ResponseEnd
+		},
+		EscrowReader: true,
+	})
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/some/url", bytes.NewReader([]byte(payload)))
+	request.Header.Set("Content-Length", strconv.Itoa(len(payload)))
+
+	before := time.Now()
+	wrapper.ServeHTTP(recorder, request)
+	after := time.Now()
+
+	if got, want := string(handlerReadPayload), payload; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := string(callbackBody), payload; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := callbackStatus, http.StatusBadRequest; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := before.Before(callbackBegin), true; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := callbackBegin.Before(callbackEnd), true; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := callbackEnd.Before(after), true; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }
