@@ -252,8 +252,9 @@ func New(next http.Handler, config Config) http.Handler {
 		}
 
 		// Invoke callback if provided, prior to logging request.
+		var stats *Statistics
 		if config.Callback != nil {
-			stats := &Statistics{
+			stats = &Statistics{
 				RequestBegin:   rw.begin,
 				ResponseStatus: rw.status,
 				ResponseEnd:    rw.end,
@@ -266,9 +267,7 @@ func New(next http.Handler, config Config) http.Handler {
 
 		// Update log
 		if config.LogWriter != nil {
-			var bit uint32 = 1 << uint32(statusClass-1)
-
-			if (atomic.LoadUint32(config.LogBitmask))&bit > 0 {
+			if (stats != nil && stats.emitLog) || (atomic.LoadUint32(config.LogBitmask))&(1<<uint32(statusClass-1)) > 0 {
 				buf := make([]byte, 0, 128)
 				for _, emitter := range emitters {
 					emitter(rw, r, &buf)

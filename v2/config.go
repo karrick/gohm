@@ -112,4 +112,11 @@ type Statistics struct {
 
 	// ResponseEnd is the time response writing completed.
 	ResponseEnd time.Time
+
+	emitLog bool
+}
+
+// Log causes the gohm handler to emit the log line for this request.
+func (stats *Statistics) Log() {
+	stats.emitLog = true
 }
