@@ -67,38 +67,38 @@ import (
     "log"
     "net/http"
     "path/filepath"
-    
+
     gohm "github.com/karrick/gohm/v2"
 )
 
 func main() {
-	optPort := flag.Int("port", 8080, "HTTP server network port")
-	optStatic := flag.String("static", "static", "filesystem pathname to static virtual root")
-	flag.Parse()
+    optPort := flag.Int("port", 8080, "HTTP server network port")
+    optStatic := flag.String("static", "static", "filesystem pathname to static virtual root")
+    flag.Parse()
 
-	*optStatic = filepath.Clean(*optStatic)
+    *optStatic = filepath.Clean(*optStatic)
 
-	// create mux rather than using http.DefaultServeMux so we can later wrap it
-	// with gohm.New to provide logging, error handling, along with panic and
-	// timeout protection.
-	mux := http.NewServeMux()
+    // create mux rather than using http.DefaultServeMux so we can later wrap it
+    // with gohm.New to provide logging, error handling, along with panic and
+    // timeout protection.
+    mux := http.NewServeMux()
 
-	// static resources
-	mux.Handle("/static/", gohm.StaticHandler("/static/", *optStatic))
+    // static resources
+    mux.Handle("/static/", gohm.StaticHandler("/static/", *optStatic))
 
-	// default handler serves index page for empty URI, "/", but 404 for
-	// everything else.
-	mux.Handle("/", gohm.DefaultHandler(filepath.Join(*optStatic, "index.html")))
+    // default handler serves index page for empty URI, "/", but 404 for
+    // everything else.
+    mux.Handle("/", gohm.DefaultHandler(filepath.Join(*optStatic, "index.html")))
 
-	log.Print("[INFO] web service port: ", *optPort)
-	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", *optPort),
-		Handler: gohm.New(gohm.WithCompression(mux), gohm.Config{Timeout: time.Second}),
-	}
+    log.Print("[INFO] web service port: ", *optPort)
+    server := &http.Server{
+        Addr:    fmt.Sprintf(":%d", *optPort),
+        Handler: gohm.New(gohm.WithCompression(mux), gohm.Config{Timeout: time.Second}),
+    }
 
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatal("[ERROR] ", err)
-	}
+    if err := server.ListenAndServe(); err != nil {
+        log.Fatal("[ERROR] ", err)
+    }
 }
 ```
 
@@ -121,12 +121,13 @@ var (
 )
 
 func main() {
-	optStatic := flag.String("static", "static", "filesystem pathname to static virtual root")
-	flag.Parse()
+    optStatic := flag.String("static", "static", "filesystem pathname to static virtual root")
+    flag.Parse()
 
-	*optStatic = filepath.Clean(*optStatic)
+    *optStatic = filepath.Clean(*optStatic)
 
-    h := gohm.WithCompression(gohm.StaticHandler("/static/", *optStatic))
+    h := gohm.StaticHandler("/static/", *optStatic)
+    h = gohm.WithCompression(h)
 
     // gohm was designed to wrap other http.Handler functions.
     h = gohm.New(h, gohm.Config{
@@ -143,20 +144,20 @@ func main() {
 ```
 
 In the above example notice that each successive line wraps the handler of the
-line above it.  The terms upstream and downstream do not refer to which line was
-above which other line in the source code.  Rather, upstream handlers invoke
-downstream handlers.  In both of the above examples, the top level handler is
-`gohm`, which is upstream of `gohm.WithGzip`, which in turn is upstream of
-`http.StripPrefix`, which itself is upstream of `http.FileServer`, which finally
-is upstream of `http.Dir`.
+line above it.  The terms upstream and downstream do not refer to which line
+was above which other line in the source code.  Rather, upstream handlers
+invoke downstream handlers.  In both of the above examples, the top level
+handler is `gohm`, which is upstream of `gohm.WithGzip`, which in turn is
+upstream of `http.StripPrefix`, which itself is upstream of `http.FileServer`,
+which finally is upstream of `http.Dir`.
 
-As another illustration, the following two example functions are equivalent, and
-both invoke `handlerA` to perform some setup then invoke `handlerB`, which
+As another illustration, the following two example functions are equivalent,
+and both invoke `handlerA` to perform some setup then invoke `handlerB`, which
 performs its setup work, and finally invokes `handlerC`.  Both do the same
 thing, but source code looks vastly different.  In both cases, `handlerA` is
-considered upstream from `handlerB`, which is considered upstream of `handlerC`.
-Similarly, `handlerC` is downstream of `handlerB`, which is likewise downstream
-of `handlerA`.
+considered upstream from `handlerB`, which is considered upstream of
+`handlerC`.  Similarly, `handlerC` is downstream of `handlerB`, which is
+likewise downstream of `handlerA`.
 
 ```Go
 func example1() {
@@ -167,6 +168,20 @@ func example2() {
     h := handlerC
     h = handlerB(h)
     h = handlerA(h)
+}
+```
+
+Sometimes it is necessary to cast a regular function to the http.HandleFunc
+type, as shown below.
+
+```Go
+func fooHandler(w http.ResponseWriter, r *http.Request) {
+    w.Write([]byte("Hello, World!\r\n"))
+}
+
+func example() {
+    h := gohm.WithCompression(http.HandlerFunc(fooHandler))
+    // ...
 }
 ```
 
@@ -226,9 +241,53 @@ handlers.  When set to false, also the default value, panics will be converted
 into Internal Server Errors (status code 500).  You cannot change this setting
 after creating the `http.Handler`.
 
+##### BufPool
+
+`BufPool`, when not nil, specifies a free-list pool of buffers to be used to
+reduce garbage collection by reusing bytes.Buffer instances.
+
+When BufPool is non-nil and EscrowReader is true, and a request is received by
+gohm which has been configured to read in the payload before calling the
+handler, the provided BufPool's Get method will be invoked to obtain a
+bytes.Buffer to hold the bytes from the request payload. After the request
+handler has completed the bytes.Buffer will be returned to the specified
+BufPool by invoking its Put method.
+
+See `examples/payload/main.go` for an example of using BufPool, Callback, and
+EscrowReader.
+
+##### Callback
+
+By default after the request handler has completed its work, gohm will
+optionally log request statistics prior to releasing resources. Sometimes an
+application needs to perform some post-request operations, and may do so in the
+specified Callback function. The Callback function is invoked with a Statistics
+argument that provides the begin and end times of the request, a slice of bytes
+provided in the request body, and the numeric response status code. The
+provided Statistics structure provides a nilary Log method that forces gohm to
+emit a log of the request regardless of any other logging flags.
+
+See `examples/payload/main.go` for an example of using BufPool, Callback, and
+EscrowReader.
+
 ##### Counters
 
 `Counters`, if not nil, tracks counts of handler response status codes.
+
+##### EscrowReader
+
+By default request handlers will read the request payload from the
+http.Request's Body field, an io.ReadCloser that the request handler is
+responsible to close. However, some handlers may want to re-read the payload,
+or sometimes a provided Callback method needs to reprocess the request payload
+after the handler has completed. When EscrowReader is set to true, gohm will
+fully consume the request body payload, storing it in a buffer, and allowing
+no-penalty reads and re-reads. It ensures the original handler may continue to
+read and close the provided http.Request's Body field as normal, to minimize
+code change to handlers that are not aware of the optimization.
+
+See `examples/payload/main.go` for an example of using BufPool, Callback, and
+EscrowReader.
 
 ##### LogBitmask
 
