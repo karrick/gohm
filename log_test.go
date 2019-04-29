@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/karrick/gohm/v2"
+	"github.com/karrick/gohm"
 )
 
 func TestLogAllWithoutError(t *testing.T) {

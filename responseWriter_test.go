@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/karrick/gohm/v2"
+	"github.com/karrick/gohm"
 )
 
 func TestResponseWriter(t *testing.T) {

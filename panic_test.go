@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/karrick/gohm/v2"
+	"github.com/karrick/gohm"
 )
 
 func TestAllowPanicsFalse(t *testing.T) {

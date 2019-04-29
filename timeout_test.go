@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/karrick/gohm/v2"
+	"github.com/karrick/gohm"
 )
 
 func TestBeforeTimeout(t *testing.T) {
