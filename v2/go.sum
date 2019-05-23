@@ -1,4 +1,6 @@
-github.com/karrick/gobp v1.1.0 h1:kpuuiC2Dp6Pq/xrvPsuHrpY3BzJF1+ETzmNKyghcT+c=
-github.com/karrick/gobp v1.1.0/go.mod h1:1/PkJ2iO3XIgCnvoesy0tYdy7E4DuF7rlb9uAc79Q78=
-github.com/karrick/gorill v1.4.0 h1:Ym3xPcMH2kjQXp4qlD4xNI1/88ZCDQe/KwaTbSkYzLI=
-github.com/karrick/gorill v1.4.0/go.mod h1:urx65/Lk/pupwNuP+jFSHBpBsFEmy1dLSOWpgOCeD/I=
+github.com/karrick/gobp v1.1.1 h1:aaD60ru5bs4QgWM+DIjy51e4b1epHpE8ohTIUmZvUmI=
+github.com/karrick/gobp v1.1.1/go.mod h1:1/PkJ2iO3XIgCnvoesy0tYdy7E4DuF7rlb9uAc79Q78=
+github.com/karrick/gopool v1.2.0 h1:wHf8ckfRCnBDXf/86D6JMiRekeNgmKOl2R//VhD3vbk=
+github.com/karrick/gopool v1.2.0/go.mod h1:iazR3d8XJl363Qmuv6ytChQRTjL7Jf/V9+nNHLZblow=
+github.com/karrick/gorill v1.9.0 h1:zKlRRwhWHjY/6xGoDJ7GVeK+vEVGLKBPkiZIi98STPI=
+github.com/karrick/gorill v1.9.0/go.mod h1:RlCfg3XIDNF2pbami04hiO2Yj7k8es4rIs3dJONvCs0=

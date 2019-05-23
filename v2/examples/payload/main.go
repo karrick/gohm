@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/karrick/gobp"
-	gohm "github.com/karrick/gohm/v2"
+	"github.com/karrick/gohm/v2"
 )
 
 var latencyThreshold = 5 * time.Nanosecond
