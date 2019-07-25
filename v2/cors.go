@@ -45,7 +45,7 @@ func CORSHandler(config CORSConfig, next http.Handler) http.Handler {
 	config.AllowHeaders = sortAndMaybeInsertString("X-Requested-With", config.AllowHeaders)
 	allowHeaders := strings.Join(config.AllowHeaders, ", ")
 
-	maxAge := strconv.Itoa(config.MaxAgeSeconds)
+	maxAge := strconv.FormatInt(int64(config.MaxAgeSeconds), 10)
 
 	return AllowedMethodsHandler(config.AllowMethods, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// When Cross Origin Resource Sharing (CORS) request arrives, the

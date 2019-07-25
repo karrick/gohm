@@ -11,16 +11,21 @@ import (
 )
 
 func TestAllowPanicsFalse(t *testing.T) {
+	const responseBody = "test panic"
+
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "/some/url", nil)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		panic("test error")
+		panic(responseBody)
 	}), gohm.Config{})
 
 	var panicked bool
 	served := make(chan struct{})
 
+	// Invoke the hander inside a go routine with panic protection, to make sure
+	// that gohm catches the panic itself, and responds to http.ResponseWriter
+	// properly.
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -39,14 +44,14 @@ func TestAllowPanicsFalse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if actual, expected := panicked, false; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := panicked, false; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := resp.StatusCode, http.StatusInternalServerError; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := resp.StatusCode, http.StatusInternalServerError; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := string(body), "500 Internal Server Error"; !strings.Contains(actual, expected) {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), responseBody; !strings.Contains(got, want) {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -79,13 +84,13 @@ func TestAllowPanicsTrue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if actual, expected := panicked, true; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := panicked, true; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 	// NOTE: Cannot verify resp.StatusCode because httptest.ResponseRecorder
 	// initializes StatusCode to http.StatusOK if not written, even though it is
 	// never set.
-	if actual, expected := string(body), ""; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), ""; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }

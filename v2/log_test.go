@@ -26,8 +26,8 @@ func TestLogAllWithoutError(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if actual, expected := logOutput.String(), fmt.Sprintf(" %d ", http.StatusOK); !strings.Contains(actual, expected) {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := logOutput.String(), fmt.Sprintf(" %d ", http.StatusOK); !strings.Contains(got, want) {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -43,8 +43,8 @@ func TestLogAllWithError(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if actual, expected := logOutput.String(), fmt.Sprintf(" %d ", http.StatusConflict); !strings.Contains(actual, expected) {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := logOutput.String(), fmt.Sprintf(" %d ", http.StatusConflict); !strings.Contains(got, want) {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -63,8 +63,8 @@ func TestLogErrorsWhenWriteHeaderErrorStatus(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if actual, expected := logOutput.String(), fmt.Sprintf(" %d ", http.StatusForbidden); !strings.Contains(actual, expected) {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := logOutput.String(), fmt.Sprintf(" %d ", http.StatusForbidden); !strings.Contains(got, want) {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -81,8 +81,8 @@ func TestLogErrorsWithError(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if actual, expected := logOutput.String(), fmt.Sprintf(" %d ", http.StatusForbidden); !strings.Contains(actual, expected) {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := logOutput.String(), fmt.Sprintf(" %d ", http.StatusForbidden); !strings.Contains(got, want) {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -99,8 +99,8 @@ func TestLogErrorsWithoutError(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if actual, expected := logOutput.String(), ""; actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := logOutput.String(), ""; got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -120,8 +120,8 @@ func TestLogWithFormatStatusEscapedCharacters(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if actual, expected := logOutput.String(), "{client-ip}\n"; actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := logOutput.String(), "{client-ip}\n"; got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -140,9 +140,9 @@ func TestLogWithFormatStatic(t *testing.T) {
 
 		handler.ServeHTTP(recorder, request)
 
-		expected := fmt.Sprintf("1.2.3.4:1234 1.2.3.4 1234 - \"GET /some/url HTTP/1.1\" %d 26\n", http.StatusForbidden)
-		if actual := logOutput.String(); actual != expected {
-			t.Fatalf("\nGOT:\n\t%#v\nExpected:\n\t%#v", actual, expected)
+		want := fmt.Sprintf("1.2.3.4:1234 1.2.3.4 1234 - \"GET /some/url HTTP/1.1\" %d 26\n", http.StatusForbidden)
+		if got := logOutput.String(); got != want {
+			t.Fatalf("\nGOT:\n\t%#v\nWant:\n\t%#v", got, want)
 		}
 	})
 
@@ -158,9 +158,9 @@ func TestLogWithFormatStatic(t *testing.T) {
 
 		handler.ServeHTTP(recorder, request)
 
-		expected := fmt.Sprintf("[::1]:1234 ::1 1234 - \"GET /some/url HTTP/1.1\" %d 26\n", http.StatusForbidden)
-		if actual := logOutput.String(); actual != expected {
-			t.Fatalf("\nGOT:\n\t%#v\nExpected:\n\t%#v", actual, expected)
+		want := fmt.Sprintf("[::1]:1234 ::1 1234 - \"GET /some/url HTTP/1.1\" %d 26\n", http.StatusForbidden)
+		if got := logOutput.String(); got != want {
+			t.Fatalf("\nGOT:\n\t%#v\nWant:\n\t%#v", got, want)
 		}
 	})
 
@@ -180,9 +180,9 @@ func TestLogWithFormatIgnoresInvalidTokens(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	expected := fmt.Sprintf("This is an {invalid-token} with a %d after it\n", http.StatusForbidden)
-	if actual := logOutput.String(); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	want := fmt.Sprintf("This is an {invalid-token} with a %d after it\n", http.StatusForbidden)
+	if got := logOutput.String(); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -211,10 +211,10 @@ func TestLogWithFormatDynamic(t *testing.T) {
 	afterTime := time.Now()
 
 	// first, grab the begin-epoch, and compute the other begin values
-	actual := logOutput.String()
+	got := logOutput.String()
 
-	indexFirstSpace := strings.IndexByte(actual, ' ')
-	beginString := actual[:indexFirstSpace]
+	indexFirstSpace := strings.IndexByte(got, ' ')
+	beginString := got[:indexFirstSpace]
 
 	beginTime := timeFromEpochString(t, beginString)
 	if beginTime.Before(beforeTime.Truncate(time.Second)) {
@@ -225,8 +225,8 @@ func TestLogWithFormatDynamic(t *testing.T) {
 	}
 
 	// first, grab the end-epoch, and compute the other end values
-	indexSecondSpace := indexFirstSpace + strings.IndexByte(actual[indexFirstSpace+1:], ' ')
-	endString := actual[indexFirstSpace+1 : indexSecondSpace+1]
+	indexSecondSpace := indexFirstSpace + strings.IndexByte(got[indexFirstSpace+1:], ' ')
+	endString := got[indexFirstSpace+1 : indexSecondSpace+1]
 	endTime := timeFromEpochString(t, endString)
 	if endTime.Before(beforeTime.Truncate(time.Second)) {
 		t.Errorf("End: %v; Before: %v", endTime, beforeTime)
@@ -235,32 +235,32 @@ func TestLogWithFormatDynamic(t *testing.T) {
 		t.Errorf("End: %v; After: %v", endTime, afterTime)
 	}
 
-	if actual, expected := actual[len(actual)-1:], "\n"; actual != expected {
-		t.Errorf("Actual: %#v; #Expected: %#v", actual, expected)
+	if got, want := got[len(got)-1:], "\n"; got != want {
+		t.Errorf("Got: %#v; #Want: %#v", got, want)
 	}
 
-	indexFinalSpace := strings.LastIndexByte(actual, ' ')
-	durationString := actual[indexFinalSpace+1 : len(actual)-1]
+	indexFinalSpace := strings.LastIndexByte(got, ' ')
+	durationString := got[indexFinalSpace+1 : len(got)-1]
 
 	// to check duration, let's just ensure we can parse it as a float, and it's less than the span duration
 	durationFloat, err := strconv.ParseFloat(durationString, 64)
 	if err != nil {
-		t.Errorf("Actual: %#v; Expected: %#v", err, nil)
+		t.Errorf("GOT: %v; WANT: %v", err, nil)
 	}
 	durationMilliseconds := afterTime.Sub(beforeTime).Nanoseconds() / 1000
 	if int64(durationFloat*1000000) > durationMilliseconds {
 		t.Errorf("durationFloat: %v; durationMilliseconds: %v", durationFloat, durationMilliseconds)
 	}
 
-	expected := fmt.Sprintf("%s %s %s %s %s %s %s\n", beginString, endString,
+	want := fmt.Sprintf("%s %s %s %s %s %s %s\n", beginString, endString,
 		beginTime.UTC().Format(apacheTimeFormat),
 		beginTime.UTC().Format(time.RFC3339),
 		endTime.UTC().Format(apacheTimeFormat),
 		endTime.UTC().Format(time.RFC3339),
 		durationString)
 
-	if actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -277,10 +277,10 @@ func TestLogWithFormatEmoji(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	actual := logOutput.String()
-	expected := fmt.Sprintf("😛 %d 😊\n", http.StatusForbidden)
-	if actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	got := logOutput.String()
+	want := fmt.Sprintf("😛 %d 😊\n", http.StatusForbidden)
+	if got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 

@@ -28,7 +28,7 @@ import (
 //			})
 //	}
 func Error(w http.ResponseWriter, text string, code int) {
-	fullText := strconv.Itoa(code) + " " + http.StatusText(code)
+	fullText := strconv.FormatInt(int64(code), 10) + " " + http.StatusText(code)
 	if text != "" {
 		fullText += ": " + text
 	}

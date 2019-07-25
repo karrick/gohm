@@ -26,13 +26,13 @@ type Config struct {
 	// Counters, if not nil, tracks counts of handler response status codes.
 	Counters *Counters
 
-	// EscrowReader specifies whether the middleware ought to provide an escrow
-	// reader for the request body. The escrow reader reads the body exactly
-	// once, storing the payload in a buffer, from which the downstream request
-	// handler reads the data as it normally would, but also where an optional
-	// Callback function might be able to have access to the request body
-	// payload. When false, the specified Callback will return a nil for the
-	// Statistics.ResponseBody.
+	// EscrowReader specifies whether the middleware handler ought to provide an
+	// escrow reader for the request body.  The escrow reader reads the body
+	// exactly once, storing the payload in a buffer, from which the downstream
+	// request handler reads the data as it normally would, but also where an
+	// optional Callback function might be able to have access to the request
+	// body payload.  When false, the specified Callback will return a nil for
+	// the Statistics.ResponseBody.
 	EscrowReader bool
 
 	// LogBitmask, if not nil, specifies a bitmask to use to determine which

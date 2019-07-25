@@ -33,16 +33,16 @@ func TestResponseWriter(t *testing.T) {
 
 	resp := recorder.Result()
 
-	if actual, expected := resp.StatusCode, status; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := resp.StatusCode, status; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if actual, expected := string(body), response; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), response; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
 	// created sorted list of keys
@@ -53,22 +53,22 @@ func TestResponseWriter(t *testing.T) {
 	sort.Strings(keys)
 
 	// ensure list of keys match
-	if actual, expected := fmt.Sprintf("%s", keys), "[Bar Foo]"; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := fmt.Sprintf("%s", keys), "[Bar Foo]"; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
-	// for every actual key, ensure values match
+	// for every key, ensure values match
 	for key, values := range resp.Header {
 		sort.Strings(values)
-		var expected string
+		var want string
 		switch key {
 		case "Bar":
-			expected = "[bar1 bar2]"
+			want = "[bar1 bar2]"
 		case "Foo":
-			expected = "[foo1 foo2]"
+			want = "[foo1 foo2]"
 		}
-		if actual := fmt.Sprintf("%s", values); actual != expected {
-			t.Errorf("Key: %q; Actual: %#v; Expected: %#v", key, actual, expected)
+		if got := fmt.Sprintf("%s", values); got != want {
+			t.Errorf("KEY: %q; GOT: %v; WANT: %v", key, got, want)
 		}
 	}
 }
@@ -90,12 +90,12 @@ func TestResponseWriterWhenWriteHeaderErrorStatus(t *testing.T) {
 	}
 
 	// status code ought to have been sent to client
-	if actual, expected := resp.StatusCode, http.StatusForbidden; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := resp.StatusCode, http.StatusForbidden; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 	// but when only invoke WriteHeader, nothing gets written to client
-	if actual, expected := string(body), ""; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), ""; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"sort"
@@ -15,37 +16,68 @@ import (
 	"github.com/karrick/gohm/v2"
 )
 
+func buildResponse() string {
+	var response string
+	// For short tests, use a small buffer; for regular tests, use a larger
+	// buffer.
+	size := 512
+	if !testing.Short() {
+		size = 32768 + rand.Intn(65536)
+	}
+	for i := 0; i < size; i++ {
+		response += "a"
+	}
+	return response
+}
+
 func TestResponseWriter(t *testing.T) {
-	status := http.StatusCreated
-	response := "some response"
+	response := buildResponse()
+	bp := new(gobp.Pool)
+
+	t.Run("without buffer pool", func(t *testing.T) {
+		testResponseWriter(t, response, nil)
+	})
+
+	t.Run("with buffer pool", func(t *testing.T) {
+		testResponseWriter(t, response, bp)
+	})
+}
+
+func testResponseWriter(tb testing.TB, response string, bp gohm.BytesBufferPool) {
+	statusCode := http.StatusCreated
 
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "/some/url", nil)
 
 	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(status)
-		header := w.Header()
-		header.Add("foo", "foo1")
-		header.Add("foo", "foo2")
-		header.Add("bar", "bar1")
-		header.Add("bar", "bar2")
-		w.Write([]byte(response))
-	}), gohm.Config{})
+		w.Header().Add("foo", "foo1")
+		w.Header().Add("foo", "foo2")
+		w.Header().Add("bar", "bar1")
+		w.Header().Add("bar", "bar2")
+		w.WriteHeader(statusCode)
+		n, err := w.Write([]byte(response))
+		if got, want := n, len(response); got != want {
+			tb.Errorf("GOT: %v; WANT: %v", got, want)
+		}
+		if got, want := err, error(nil); got != want {
+			tb.Errorf("GOT: %v; WANT: %v", got, want)
+		}
+	}), gohm.Config{BufPool: bp})
 
 	handler.ServeHTTP(recorder, request)
 
 	resp := recorder.Result()
 
-	if actual, expected := resp.StatusCode, status; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := resp.StatusCode, statusCode; got != want {
+		tb.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		t.Fatal(err)
+		tb.Fatal(err)
 	}
-	if actual, expected := string(body), response; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), response; got != want {
+		tb.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
 	// created sorted list of keys
@@ -56,22 +88,22 @@ func TestResponseWriter(t *testing.T) {
 	sort.Strings(keys)
 
 	// ensure list of keys match
-	if actual, expected := fmt.Sprintf("%s", keys), "[Bar Foo]"; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := fmt.Sprintf("%s", keys), "[Bar Foo]"; got != want {
+		tb.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
-	// for every actual key, ensure values match
+	// for every got key, ensure values match
 	for key, values := range resp.Header {
 		sort.Strings(values)
-		var expected string
+		var want string
 		switch key {
 		case "Bar":
-			expected = "[bar1 bar2]"
+			want = "[bar1 bar2]"
 		case "Foo":
-			expected = "[foo1 foo2]"
+			want = "[foo1 foo2]"
 		}
-		if actual := fmt.Sprintf("%s", values); actual != expected {
-			t.Errorf("Key: %q; Actual: %#v; Expected: %#v", key, actual, expected)
+		if got := fmt.Sprintf("%s", values); got != want {
+			tb.Errorf("Key: %q; Got: %#v; Want: %#v", key, got, want)
 		}
 	}
 }
@@ -93,13 +125,32 @@ func TestResponseWriterWhenWriteHeaderErrorStatus(t *testing.T) {
 	}
 
 	// status code ought to have been sent to client
-	if actual, expected := resp.StatusCode, http.StatusForbidden; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := resp.StatusCode, http.StatusForbidden; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 	// but when only invoke WriteHeader, nothing gets written to client
-	if actual, expected := string(body), ""; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), ""; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
+}
+
+func BenchmarkResponseWriter(b *testing.B) {
+	bp := new(gobp.Pool)
+	response := buildResponse()
+
+	b.ResetTimer()
+
+	b.Run("without buffer pool", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			testResponseWriter(b, response, nil)
+		}
+	})
+
+	b.Run("with buffer pool", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			testResponseWriter(b, response, bp)
+		}
+	})
 }
 
 func BenchmarkWithoutResponseWriter(b *testing.B) {

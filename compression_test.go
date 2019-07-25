@@ -24,16 +24,16 @@ func TestGzipUncompressed(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if actual, expected := recorder.Code, http.StatusOK; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Code, http.StatusOK; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
-	if actual, expected := recorder.Header().Get("Content-Encoding"), ""; actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Header().Get("Content-Encoding"), ""; got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 
-	if actual, expected := recorder.Body.String(), response; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Body.String(), response; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -50,12 +50,12 @@ func TestGzipCompressed(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if actual, expected := recorder.Code, http.StatusOK; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Code, http.StatusOK; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
-	if actual, expected := recorder.Header().Get("Content-Encoding"), "gzip"; actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Header().Get("Content-Encoding"), "gzip"; got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 
 	iorc, err := gzip.NewReader(recorder.Body)
@@ -73,8 +73,8 @@ func TestGzipCompressed(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if actual, expected := string(blob), response; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(blob), response; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -90,16 +90,16 @@ func TestCompressionUncompressed(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if actual, expected := recorder.Code, http.StatusOK; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Code, http.StatusOK; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
-	if actual, expected := recorder.Header().Get("Content-Encoding"), ""; actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Header().Get("Content-Encoding"), ""; got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 
-	if actual, expected := recorder.Body.String(), response; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Body.String(), response; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -120,12 +120,12 @@ func TestCompressionGzipPreferredOverDeflate(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if actual, expected := recorder.Code, http.StatusOK; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Code, http.StatusOK; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
-	if actual, expected := recorder.Header().Get("Content-Encoding"), "gzip"; actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Header().Get("Content-Encoding"), "gzip"; got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 
 	iorc, err := gzip.NewReader(recorder.Body)
@@ -143,8 +143,8 @@ func TestCompressionGzipPreferredOverDeflate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if actual, expected := string(blob), response; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(blob), response; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -165,12 +165,12 @@ func TestCompressionDeflateWorks(t *testing.T) {
 
 	handler.ServeHTTP(recorder, request)
 
-	if actual, expected := recorder.Code, http.StatusOK; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Code, http.StatusOK; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
-	if actual, expected := recorder.Header().Get("Content-Encoding"), "deflate"; actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := recorder.Header().Get("Content-Encoding"), "deflate"; got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 
 	iorc := flate.NewReader(recorder.Body)
@@ -185,7 +185,7 @@ func TestCompressionDeflateWorks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if actual, expected := string(blob), response; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(blob), response; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }

@@ -29,12 +29,12 @@ func TestBeforeTimeout(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if actual, expected := resp.StatusCode, http.StatusOK; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := resp.StatusCode, http.StatusOK; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
-	if actual, expected := string(body), response; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), response; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -57,12 +57,12 @@ func TestAfterTimeout(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if actual, expected := resp.StatusCode, http.StatusServiceUnavailable; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := resp.StatusCode, http.StatusServiceUnavailable; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
-	if actual, expected := string(body), "503 Service Unavailable"; !strings.Contains(actual, expected) {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), "503 Service Unavailable"; !strings.Contains(got, want) {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }
 

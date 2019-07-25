@@ -35,14 +35,14 @@ func testCounter(t *testing.T, status int) gohm.Counters {
 		t.Fatal(err)
 	}
 
-	if actual, expected := resp.StatusCode, status; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := resp.StatusCode, status; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := string(body), response; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), response; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.GetAll(), uint64(1); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.GetAll(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 	return counters
 }
@@ -50,120 +50,120 @@ func testCounter(t *testing.T, status int) gohm.Counters {
 func TestStatusCounters1xx(t *testing.T) {
 	counters := testCounter(t, http.StatusContinue) // 100
 
-	if actual, expected := counters.Get1xx(), uint64(1); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get1xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get2xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get2xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get3xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get3xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get4xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get4xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get5xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get5xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
 func TestStatusCounters2xxWithoutHandlerWritingStatus(t *testing.T) {
 	counters := testCounter(t, http.StatusOK) // 200
 
-	if actual, expected := counters.Get1xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get1xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get2xx(), uint64(1); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get2xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get3xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get3xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get4xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get4xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get5xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get5xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
 func TestStatusCounters2xx(t *testing.T) {
 	counters := testCounter(t, http.StatusCreated) // 201
 
-	if actual, expected := counters.Get1xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get1xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get2xx(), uint64(1); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get2xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get3xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get3xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get4xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get4xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get5xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get5xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
 func TestStatusCounters3xx(t *testing.T) {
 	counters := testCounter(t, http.StatusFound) // 302
 
-	if actual, expected := counters.Get1xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get1xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get2xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get2xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get3xx(), uint64(1); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get3xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get4xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get4xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get5xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get5xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
 func TestStatusCounters4xx(t *testing.T) {
 	counters := testCounter(t, http.StatusForbidden) // 403
 
-	if actual, expected := counters.Get1xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get1xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get2xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get2xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get3xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get3xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get4xx(), uint64(1); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get4xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get5xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get5xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
 func TestStatusCounters5xx(t *testing.T) {
 	counters := testCounter(t, http.StatusGatewayTimeout) // 504
 
-	if actual, expected := counters.Get1xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get1xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get2xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get2xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get3xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get3xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get4xx(), uint64(0); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get4xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := counters.Get5xx(), uint64(1); actual != expected {
-		t.Fatalf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := counters.Get5xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
 

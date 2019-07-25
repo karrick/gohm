@@ -39,14 +39,14 @@ func TestAllowPanicsFalse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if actual, expected := panicked, false; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := panicked, false; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := resp.StatusCode, http.StatusInternalServerError; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := resp.StatusCode, http.StatusInternalServerError; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
-	if actual, expected := string(body), "500 Internal Server Error"; !strings.Contains(actual, expected) {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), "500 Internal Server Error"; !strings.Contains(got, want) {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }
 
@@ -79,13 +79,13 @@ func TestAllowPanicsTrue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if actual, expected := panicked, true; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := panicked, true; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 	// NOTE: Cannot verify resp.StatusCode because httptest.ResponseRecorder
 	// initializes StatusCode to http.StatusOK if not written, even though it is
 	// never set.
-	if actual, expected := string(body), ""; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), ""; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }

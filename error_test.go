@@ -26,11 +26,11 @@ func TestWhenErrorInvoked(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if actual, expected := resp.StatusCode, http.StatusForbidden; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := resp.StatusCode, http.StatusForbidden; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 
-	if actual, expected := string(body), "403 Forbidden: some error\n"; actual != expected {
-		t.Errorf("Actual: %#v; Expected: %#v", actual, expected)
+	if got, want := string(body), "403 Forbidden: some error\n"; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }

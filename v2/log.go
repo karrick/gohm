@@ -166,20 +166,20 @@ func makeStringEmitter(value string) func(*responseWriter, *http.Request, *[]byt
 	}
 }
 
-func beginEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, lrw.begin.UTC().Format(apacheTimeFormat)...)
+func beginEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, grw.begin.UTC().Format(apacheTimeFormat)...)
 }
 
-func beginEpochEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, strconv.FormatInt(lrw.begin.UTC().Unix(), 10)...)
+func beginEpochEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, strconv.FormatInt(grw.begin.UTC().Unix(), 10)...)
 }
 
-func beginISO8601Emitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, lrw.begin.UTC().Format(time.RFC3339)...)
+func beginISO8601Emitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, grw.begin.UTC().Format(time.RFC3339)...)
 }
 
-func bytesEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, strconv.FormatInt(lrw.size, 10)...)
+func bytesEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, strconv.FormatInt(grw.bytesWritten, 10)...)
 }
 
 func clientEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
@@ -208,25 +208,25 @@ func clientPortEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
 	*bb = append(*bb, value...)
 }
 
-func durationEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
+func durationEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
 	// 6 decimal places: microsecond precision
-	*bb = append(*bb, strconv.FormatFloat(lrw.end.Sub(lrw.begin).Seconds(), 'f', 6, 64)...)
+	*bb = append(*bb, strconv.FormatFloat(grw.end.Sub(grw.begin).Seconds(), 'f', 6, 64)...)
 }
 
-func endEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, lrw.end.UTC().Format(apacheTimeFormat)...)
+func endEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, grw.end.UTC().Format(apacheTimeFormat)...)
 }
 
-func endEpochEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, strconv.FormatInt(lrw.end.UTC().Unix(), 10)...)
+func endEpochEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, strconv.FormatInt(grw.end.UTC().Unix(), 10)...)
 }
 
-func endISO8601Emitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, lrw.end.UTC().Format(time.RFC3339)...)
+func endISO8601Emitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, grw.end.UTC().Format(time.RFC3339)...)
 }
 
-func errorMessageEmitter(rw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, rw.errorMessage...)
+func errorMessageEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, grw.error...)
 }
 
 func methodEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
@@ -237,12 +237,12 @@ func protoEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
 	*bb = append(*bb, r.Proto...)
 }
 
-func statusEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, strconv.FormatInt(int64(lrw.status), 10)...)
+func statusEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, strconv.FormatInt(int64(grw.status), 10)...)
 }
 
-func statusTextEmitter(lrw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, http.StatusText(lrw.status)...)
+func statusTextEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
+	*bb = append(*bb, http.StatusText(grw.status)...)
 }
 
 func uriEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
