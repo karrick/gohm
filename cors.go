@@ -97,7 +97,10 @@ func CORSHandler(config CORSConfig, next http.Handler) http.Handler {
 // AllowedMethodsHandler returns a handler that only permits specified request
 // methods, and responds with an error message when request method is not a
 // member of the sorted list of allowed methods.
-func AllowedMethodsHandler(sortedAllowedMethods []string, next http.Handler) http.Handler {
+func AllowedMethodsHandler(allowedMethods []string, next http.Handler) http.Handler {
+	sortedAllowedMethods := make([]string, len(allowedMethods))
+	copy(sortedAllowedMethods, allowedMethods)
+	sort.Strings(sortedAllowedMethods)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		i := sort.SearchStrings(sortedAllowedMethods, r.Method)
 		if i == len(sortedAllowedMethods) || sortedAllowedMethods[i] != r.Method {
