@@ -9,16 +9,16 @@ func TestShiftPath(t *testing.T) {
 		in  string
 		out []string
 	}{
-		{"", []string{"", "/"}},   // invalid
-		{".", []string{"", "/"}},  // invalid
-		{"/", []string{"", "/"}},  // legal
-		{"//", []string{"", "/"}}, // invalid
-		{"/foo", []string{"foo", "/"}},
-		{"/foo/", []string{"foo", "/"}},
-		{"/foo/bar", []string{"foo", "/bar"}},
-		{"/foo/bar/baz", []string{"foo", "/bar/baz"}},
-		{"/foo/bar/baz/", []string{"foo", "/bar/baz/"}},
-		{"foo", []string{"oo", "/"}}, // invalid
+		{"", []string{"", "/"}},                        // invalid URL because empty string
+		{".", []string{"", "/"}},                       // invalid URL because does not start with slash
+		{"/", []string{"", "/"}},                       // valid URL
+		{"//", []string{"", "/"}},                      // invalid URL because of double slash
+		{"/foo", []string{"foo", "/"}},                 // valid URL
+		{"/foo/", []string{"foo", "/"}},                // valid URL
+		{"/foo/bar", []string{"foo", "/bar"}},          // valid URL
+		{"/foo/bar/baz", []string{"foo", "/bar/baz"}},  // valid URL
+		{"/foo/bar/baz/", []string{"foo", "/bar/baz"}}, // valid URL
+		{"foo", []string{"oo", "/"}},                   // invalid URL because does not start with slash
 	}
 
 	for _, c := range cases {
