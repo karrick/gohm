@@ -19,18 +19,17 @@ func TestPrefix(t *testing.T) {
 		{"/foo/bar/baz", []string{"foo", "/bar/baz"}},
 	}
 
-	bodyReadCloser := ioutil.NopCloser(bytes.NewReader([]byte("line1\nline2\n")))
-
 	for _, c := range cases {
-		request := httptest.NewRequest("POST", c.in, bodyReadCloser)
-		gotString, gotRequest := prefix(request)
+		request := httptest.NewRequest("POST", c.in, ioutil.NopCloser(bytes.NewReader([]byte("line1\nline2\n"))))
+		gotString := prefix(request)
 		if want, got := c.out[0], gotString; want != got {
 			t.Errorf("%q: WANT: %v; GOT: %v", c.in, want, got)
 		}
-		if want, got := c.out[1], gotRequest.URL.Path; want != got {
+		if want, got := c.out[1], request.URL.Path; want != got {
 			t.Errorf("%q: WANT: %v; GOT: %v", c.in, want, got)
 		}
-		gotBody, err := readAllThenClose(gotRequest.Body)
+		// Ensure body is still readable; not checking other structure fields.
+		gotBody, err := readAllThenClose(request.Body)
 		if want, got := (error)(nil), err; got != want {
 			t.Errorf("%q: WANT: %v; GOT: %v", c.in, want, got)
 		}
