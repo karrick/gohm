@@ -47,15 +47,15 @@ func TestPrefix(t *testing.T) {
 	})
 
 	t.Run("example", func(t *testing.T) {
-		v1Handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		v1Handler := func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(fmt.Sprintf("v1 %s\r\n", r.URL.Path)))
-		})
+		}
 
-		v2Handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		v2Handler := func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(fmt.Sprintf("v2 %s\r\n", r.URL.Path)))
-		})
+		}
 
-		apiHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiHandler := func(w http.ResponseWriter, r *http.Request) {
 			switch prefix := gohm.Prefix(r); prefix {
 			case "v1":
 				v1Handler(w, r)
@@ -64,13 +64,13 @@ func TestPrefix(t *testing.T) {
 			default:
 				http.Error(w, prefix, http.StatusNotFound)
 			}
-		})
+		}
 
 		t.Run("v1", func(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest("GET", "/v1/foo", nil)
 
-			apiHandler.ServeHTTP(recorder, request)
+			apiHandler(recorder, request)
 
 			resp := recorder.Result()
 			body, err := readAllThenClose(resp.Body)
@@ -88,7 +88,7 @@ func TestPrefix(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest("GET", "/v2/foo", nil)
 
-			apiHandler.ServeHTTP(recorder, request)
+			apiHandler(recorder, request)
 
 			resp := recorder.Result()
 			body, err := readAllThenClose(resp.Body)
@@ -106,7 +106,7 @@ func TestPrefix(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			request := httptest.NewRequest("GET", "/v3/foo", nil)
 
-			apiHandler.ServeHTTP(recorder, request)
+			apiHandler(recorder, request)
 
 			resp := recorder.Result()
 			body, err := readAllThenClose(resp.Body)
