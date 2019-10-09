@@ -4,10 +4,15 @@ import (
 	"strings"
 )
 
-// shiftPath splits off the first component of p, which will be cleaned of
-// relative components before processing. The first return value will never
-// contain a slash, while the second return value will always be a path starting
-// with a slash.
+// shiftPath splits off the first component of p. The first return value will
+// never contain a slash, while the second return value will always start with a
+// slash, followed by all remaining path components, with the final slash
+// removed when remaining path components are returned.
+//
+// Example:
+//
+//     "/foo/bar/baz"  -> "foo", "/bar/baz"
+//     "/foo/bar/baz/" -> "foo", "/bar/baz"
 //
 // Inspired by:
 //     https://blog.merovius.de/2017/06/18/how-not-to-use-an-http-router.html
@@ -16,19 +21,21 @@ import (
 //     p = path.Clean("/" + p)[1:]
 //     head, tail := shiftPath(p)
 func shiftPath(p string) (string, string) {
-	if len(p) == 0 {
+	l := len(p)
+	if l == 0 {
 		return p, "/"
 	}
 	i := strings.Index(p[1:], "/") // start searching after expected first character as slash
 	switch i {
 	case -1: // not found
-		// fmt.Fprintf(os.Stderr, "not found: %q\n", p)
 		return p[1:], "/"
 	case 0: // double-slash at start
-		// fmt.Fprintf(os.Stderr, "double slash: %q\n", p)
 		return p[2:], "/"
 	default: // other
-		// fmt.Fprintf(os.Stderr, "other: %q\n", p)
-		return p[1 : i+1], p[i+1:]
+		if l-i <= 2 || p[l-1] != '/' {
+			return p[1 : i+1], p[i+1:] // no final slash or not enough characters
+		} else {
+			return p[1 : i+1], p[i+1 : l-1] // strip final slash
+		}
 	}
 }

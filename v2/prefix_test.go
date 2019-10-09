@@ -16,7 +16,9 @@ func TestPrefix(t *testing.T) {
 		{"/foo", []string{"foo", "/"}},
 		{"/foo/", []string{"foo", "/"}},
 		{"/foo/bar", []string{"foo", "/bar"}},
+		{"/foo/bar/", []string{"foo", "/bar"}},
 		{"/foo/bar/baz", []string{"foo", "/bar/baz"}},
+		{"/foo/bar/baz/", []string{"foo", "/bar/baz"}},
 	}
 
 	for _, c := range cases {
