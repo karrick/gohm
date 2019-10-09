@@ -1,7 +1,9 @@
-package gohm
+package gohm_test
 
 import (
 	"testing"
+
+	"github.com/karrick/gohm/v2"
 )
 
 func TestShiftPath(t *testing.T) {
@@ -22,7 +24,7 @@ func TestShiftPath(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		first, rest := shiftPath(c.in)
+		first, rest := gohm.ShiftPath(c.in)
 		if want, got := c.out[0], first; want != got {
 			t.Errorf("%q: WANT: %v; GOT: %v", c.in, want, got)
 		}
