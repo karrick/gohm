@@ -69,18 +69,20 @@ func New(next http.Handler, config Config) http.Handler {
 		emitters, loggedHeaders = compileFormat(config.LogFormat)
 	}
 
+	lhrh := len(loggedHeaders)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var er *gorill.EscrowReader
 		var hm map[string]string
 
-		if len(loggedHeaders) > 0 {
+		if lhrh > 0 {
 			// When any request headers are to be logged, this must copy the
 			// respective values before it creates a go routine to handle
 			// request.  Otherwise, if this must later time out the invoked
 			// request header before that returns, that handler might
 			// concurrently try to alter request headers while this is reading
 			// them to emit the log line.
-			hm = make(map[string]string)
+			hm = make(map[string]string, lhrh)
 			for _, name := range loggedHeaders {
 				value := r.Header.Get(name)
 				if value == "" {
@@ -220,9 +222,7 @@ func New(next http.Handler, config Config) http.Handler {
 		// Update log
 		if config.LogWriter != nil {
 			if (stats != nil && stats.emitLog) || (atomic.LoadUint32(config.LogBitmask))&(1<<uint32(statusClass-1)) > 0 {
-				if len(loggedHeaders) > 0 {
-					grw.loggedRequestHeaders = hm
-				}
+				grw.loggedRequestHeaders = hm
 				buf := make([]byte, 0, 128)
 				for _, emitter := range emitters {
 					emitter(grw, r, &buf)
