@@ -52,10 +52,12 @@ const LogStatusErrors uint32 = 8 | 16
 // emit, and consuming runes to create a token that is intended to match one of
 // the pre-defined format specifier tokens, or an undefined format specifier
 // token that begins with "http-".
-func compileFormat(format string) []func(*responseWriter, *http.Request, *[]byte) {
+func compileFormat(format string) ([]func(*responseWriter, *http.Request, *[]byte), []string) {
 	// build slice of emitter functions, each will emit the requested
 	// information
 	var emitters []func(*responseWriter, *http.Request, *[]byte)
+
+	hm := make(map[string]struct{})
 
 	// state machine alternating between two states: either capturing runes for
 	// the next constant buffer, or capturing runes for the next token
@@ -130,7 +132,9 @@ func compileFormat(format string) []func(*responseWriter, *http.Request, *[]byte
 			default:
 				if strings.HasPrefix(tok, "http-") {
 					// emit value of specified HTTP request header
-					emitters = append(emitters, makeHeaderEmitter(tok[5:]))
+					header := tok[5:]
+					hm[header] = struct{}{}
+					emitters = append(emitters, makeHeaderEmitter(header))
 				} else {
 					// unknown token: just append to buf, wrapped in curly
 					// braces
@@ -157,7 +161,14 @@ func compileFormat(format string) []func(*responseWriter, *http.Request, *[]byte
 	buf = append(buf, '\n') // each log line terminated by newline byte
 	emitters = append(emitters, makeStringEmitter(string(buf)))
 
-	return emitters
+	var headers []string
+	if l := len(hm); l > 0 {
+		headers = make([]string, 0, l)
+		for header := range hm {
+			headers = append(headers, header)
+		}
+	}
+	return emitters, headers
 }
 
 func makeStringEmitter(value string) func(*responseWriter, *http.Request, *[]byte) {
@@ -250,12 +261,8 @@ func uriEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
 }
 
 func makeHeaderEmitter(headerName string) func(*responseWriter, *http.Request, *[]byte) {
-	return func(_ *responseWriter, r *http.Request, bb *[]byte) {
-		value := r.Header.Get(headerName)
-		if value == "" {
-			value = "-"
-		}
-		*bb = append(*bb, value...)
+	return func(grw *responseWriter, _ *http.Request, bb *[]byte) {
+		*bb = append(*bb, grw.loggedRequestHeaders[headerName]...)
 	}
 }
 

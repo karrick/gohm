@@ -54,6 +54,7 @@ import (
 //	}
 func New(next http.Handler, config Config) http.Handler {
 	var emitters []func(*responseWriter, *http.Request, *[]byte)
+	var loggedHeaders []string
 
 	if config.LogWriter != nil {
 		if config.LogBitmask == nil {
@@ -65,7 +66,7 @@ func New(next http.Handler, config Config) http.Handler {
 			// Set a default log line format
 			config.LogFormat = DefaultLogFormat
 		}
-		emitters = compileFormat(config.LogFormat)
+		emitters, loggedHeaders = compileFormat(config.LogFormat)
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -135,6 +136,23 @@ func New(next http.Handler, config Config) http.Handler {
 		// to flush to the client, assuming neither the handler panics, nor the
 		// client connection is detected to be closed.
 		grw := &responseWriter{hrw: w, begin: time.Now(), body: bb}
+
+		if len(loggedHeaders) > 0 {
+			// When any request headers are to be logged, this must copy the
+			// respective values before it creates a go routine to handle
+			// request.  Otherwise, if this must later time out the invoked
+			// request header before that returns, that handler might
+			// concurrently try to alter request headers while this is reading
+			// them to emit the log line.
+			grw.loggedRequestHeaders = make(map[string]string)
+			for _, name := range loggedHeaders {
+				value := r.Header.Get(name)
+				if value == "" {
+					value = "-"
+				}
+				grw.loggedRequestHeaders[name] = value // NOTE: only saves first value, because that is all that is logged.
+			}
+		}
 
 		// Create a couple of channels to detect one of 3 ways to exit this
 		// handler.

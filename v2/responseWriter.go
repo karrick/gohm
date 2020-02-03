@@ -13,8 +13,9 @@ type responseWriter struct {
 	begin, end time.Time // begin and end track the duration of the request for logging purposes
 
 	// size 16
-	error string
-	hrw   http.ResponseWriter
+	error                string
+	hrw                  http.ResponseWriter
+	loggedRequestHeaders map[string]string
 
 	// size 8
 	body         *bytes.Buffer
