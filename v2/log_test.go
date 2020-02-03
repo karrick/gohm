@@ -284,6 +284,26 @@ func TestLogWithFormatEmoji(t *testing.T) {
 	}
 }
 
+func TestLogWithHTTPHeader(t *testing.T) {
+	format := "{http-User-Agent}"
+	logBitmask := gohm.LogStatusAll
+	logOutput := new(bytes.Buffer)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest("GET", "/some/url", nil)
+	request.Header.Set("User-Agent", "some-agent")
+
+	handler := gohm.New(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gohm.Error(w, "some error", http.StatusForbidden)
+	}), gohm.Config{LogBitmask: &logBitmask, LogWriter: logOutput, LogFormat: format})
+
+	handler.ServeHTTP(recorder, request)
+
+	if got, want := logOutput.String(), "some-agent\n"; got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+}
+
 func BenchmarkWithLogsElided(b *testing.B) {
 	logBitmask := gohm.LogStatusErrors
 	logOutput := new(bytes.Buffer)
