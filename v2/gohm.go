@@ -3,6 +3,7 @@ package gohm
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync/atomic"
@@ -160,27 +161,36 @@ func New(next http.Handler, config Config) http.Handler {
 		// Create a couple of channels to detect one of 3 ways to exit this
 		// handler.
 		handlerCompleted := make(chan struct{})
-		handlerPanicked := make(chan string, 1)
+		handlerPanicked := make(chan interface{}, 1)
 
 		// We must invoke downstream handler in separate goroutine in order to
 		// ensure this handler only responds to one of the three events below,
 		// whichever event takes place first.
-		go serveWithPanicProtection(grw, r, next, handlerCompleted, handlerPanicked)
+		go func() {
+			defer func() {
+				if p := recover(); p != nil {
+					handlerPanicked <- p
+				}
+			}()
+			next.ServeHTTP(grw, r)
+			// Will not get here when above line panics.
+			close(handlerCompleted)
+		}()
 
 		// Wait for the first of either of 3 events:
-		//   * serveComplete: the next.ServeHTTP method completed normally
+		//   * handlerComplete: the next.ServeHTTP method completed normally
 		//     (possibly even with an erroneous status code).
-		//   * servePanicked: the next.ServeHTTP method failed to complete, and
+		//   * handlerPanicked: the next.ServeHTTP method failed to complete, and
 		//     panicked instead with a text message.
 		//   * context is done: triggered when timeout or client disconnect.
 		select {
 		case <-handlerCompleted:
 			grw.handlerComplete()
-		case error := <-handlerPanicked:
+		case p := <-handlerPanicked:
 			if config.AllowPanics {
-				panic(error) // do not need to tell downstream to cancel, because it already panicked.
+				panic(p) // do not need to tell downstream to cancel, because it already panicked.
 			}
-			grw.handlerError(error, http.StatusInternalServerError)
+			grw.handlerError(fmt.Sprintf("%v", p), http.StatusInternalServerError)
 		case <-ctx.Done():
 			// While there are several reasons why the context may be closed,
 			// when it is because the client terminates the request while the
