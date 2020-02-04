@@ -237,7 +237,7 @@ func endISO8601Emitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
 }
 
 func errorMessageEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, grw.error...)
+	*bb = append(*bb, grw.responseError...)
 }
 
 func methodEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
@@ -249,11 +249,11 @@ func protoEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
 }
 
 func statusEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, strconv.FormatInt(int64(grw.status), 10)...)
+	*bb = append(*bb, strconv.FormatInt(int64(grw.responseStatus), 10)...)
 }
 
 func statusTextEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, http.StatusText(grw.status)...)
+	*bb = append(*bb, http.StatusText(grw.responseStatus)...)
 }
 
 func uriEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
@@ -262,7 +262,7 @@ func uriEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {
 
 func makeHeaderEmitter(headerName string) func(*responseWriter, *http.Request, *[]byte) {
 	return func(grw *responseWriter, _ *http.Request, bb *[]byte) {
-		*bb = append(*bb, grw.loggedRequestHeaders[headerName]...)
+		*bb = append(*bb, grw.requestHeaders[headerName]...)
 	}
 }
 

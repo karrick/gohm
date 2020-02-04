@@ -69,27 +69,26 @@ func New(next http.Handler, config Config) http.Handler {
 		}
 		emitters, loggedHeaders = compileFormat(config.LogFormat)
 	}
-
-	lhrh := len(loggedHeaders)
+	lrh := len(loggedHeaders)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var er *gorill.EscrowReader
-		var hm map[string]string
+		var requestHeaders map[string]string
 
-		if lhrh > 0 {
+		if lrh > 0 {
 			// When any request headers are to be logged, this must copy the
 			// respective values before it creates a go routine to handle
 			// request.  Otherwise, if this must later time out the invoked
 			// request header before that returns, that handler might
 			// concurrently try to alter request headers while this is reading
 			// them to emit the log line.
-			hm = make(map[string]string, lhrh)
+			requestHeaders = make(map[string]string, lrh)
 			for _, name := range loggedHeaders {
 				value := r.Header.Get(name)
 				if value == "" {
 					value = "-"
 				}
-				hm[name] = value // NOTE: only saves first value, because that is all that is logged.
+				requestHeaders[name] = value // NOTE: only saves first value, because that is all that is logged.
 			}
 		}
 
@@ -156,7 +155,12 @@ func New(next http.Handler, config Config) http.Handler {
 		// downstream handler's response to query.  It will eventually be used
 		// to flush to the client, assuming neither the handler panics, nor the
 		// client connection is detected to be closed.
-		grw := &responseWriter{hrw: w, begin: time.Now(), body: bb}
+		grw := &responseWriter{
+			begin:          time.Now(),
+			responseBody:   bb,
+			responseWriter: w,
+			requestHeaders: requestHeaders,
+		}
 
 		// Create a couple of channels to detect one of 3 ways to exit this
 		// handler.
@@ -190,22 +194,14 @@ func New(next http.Handler, config Config) http.Handler {
 		case p = <-handlerPanicked:
 			grw.handlerError(fmt.Sprintf("%v", p), http.StatusInternalServerError)
 		case <-ctx.Done():
-			// While there are several reasons why the context may be closed,
-			// when it is because the client terminates the request while the
-			// handler is still working, the handler might still interact with
-			// the response writer given to it.  Therefore, create and use a new
-			// response writer for the remaining duration of this call that the
-			// handler does not have simultaneous access to it.
-			grw = &responseWriter{hrw: w, begin: grw.begin, body: bytes.NewBuffer(make([]byte, 0, 128))}
-
 			// When the context is canceled, ctx.Err() will say why.  Returning
 			// a 503 because this is what http.TimeoutHandler returns for same
 			// case, even though this means 503 will be logged in server log
-			// when client has terminated the connection.
-			grw.handlerError(ctx.Err().Error(), http.StatusServiceUnavailable)
+			// even when client has terminated the connection.
+			grw.handlerTimeout(ctx.Err().Error(), http.StatusServiceUnavailable)
 		}
 
-		statusClass := grw.status / 100 // integer division (429 / 100 -> 4)
+		statusClass := grw.responseStatus / 100 // integer division (429 / 100 -> 4)
 
 		// Update status counters
 		if config.Counters != nil {
@@ -218,7 +214,7 @@ func New(next http.Handler, config Config) http.Handler {
 		if config.Callback != nil {
 			stats = &Statistics{
 				RequestBegin:   grw.begin,
-				ResponseStatus: grw.status,
+				ResponseStatus: grw.responseStatus,
 				ResponseEnd:    grw.end,
 			}
 			if er != nil {
@@ -230,7 +226,7 @@ func New(next http.Handler, config Config) http.Handler {
 		// Update log
 		if config.LogWriter != nil {
 			if (stats != nil && stats.emitLog) || (atomic.LoadUint32(config.LogBitmask))&(1<<uint32(statusClass-1)) > 0 {
-				grw.loggedRequestHeaders = hm
+				grw.requestHeaders = requestHeaders
 				buf := make([]byte, 0, 128)
 				for _, emitter := range emitters {
 					emitter(grw, r, &buf)
