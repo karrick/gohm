@@ -183,13 +183,11 @@ func New(next http.Handler, config Config) http.Handler {
 		//   * handlerPanicked: the next.ServeHTTP method failed to complete, and
 		//     panicked instead with a text message.
 		//   * context is done: triggered when timeout or client disconnect.
+		var p interface{}
 		select {
 		case <-handlerCompleted:
 			grw.handlerComplete()
-		case p := <-handlerPanicked:
-			if config.AllowPanics {
-				panic(p) // do not need to tell downstream to cancel, because it already panicked.
-			}
+		case p = <-handlerPanicked:
 			grw.handlerError(fmt.Sprintf("%v", p), http.StatusInternalServerError)
 		case <-ctx.Done():
 			// While there are several reasons why the context may be closed,
@@ -239,6 +237,12 @@ func New(next http.Handler, config Config) http.Handler {
 				}
 				_, _ = config.LogWriter.Write(buf)
 			}
+		}
+
+		// After event has had a chance to be logged, re-panic if panics are
+		// allowed and downstream handler triggered one.
+		if config.AllowPanics && p != nil {
+			panic(p) // repeat the panic raised by downstream handler
 		}
 	})
 }

@@ -87,10 +87,10 @@ func TestAllowPanicsTrue(t *testing.T) {
 	if got, want := panicked, true; got != want {
 		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
-	// NOTE: Cannot verify resp.StatusCode because httptest.ResponseRecorder
-	// initializes StatusCode to http.StatusOK if not written, even though it is
-	// never set.
-	if got, want := string(body), ""; got != want {
+	if got, want := resp.StatusCode, http.StatusInternalServerError; got != want {
+		t.Errorf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := string(body), "test error"; !strings.Contains(got, want) {
 		t.Errorf("GOT: %v; WANT: %v", got, want)
 	}
 }

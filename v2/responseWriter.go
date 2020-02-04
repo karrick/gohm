@@ -28,9 +28,7 @@ func (grw *responseWriter) handlerComplete() {
 	if grw.header != nil {
 		h := grw.hrw.Header()
 		for k, vv := range grw.header {
-			for _, v := range vv {
-				h.Add(k, v)
-			}
+			h[k] = vv
 		}
 	}
 
