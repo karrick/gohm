@@ -119,6 +119,8 @@ func compileFormat(format string) ([]func(*responseWriter, *http.Request, *[]byt
 				emitters = append(emitters, endISO8601Emitter)
 			case "error":
 				emitters = append(emitters, errorMessageEmitter)
+			case "message":
+				emitters = append(emitters, messageEmitter)
 			case "method":
 				emitters = append(emitters, methodEmitter)
 			case "proto":
@@ -237,7 +239,20 @@ func endISO8601Emitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
 }
 
 func errorMessageEmitter(grw *responseWriter, _ *http.Request, bb *[]byte) {
-	*bb = append(*bb, grw.responseError...)
+	if grw.responseError != "" {
+		*bb = append(*bb, grw.responseError...)
+	} else {
+		*bb = append(*bb, '-')
+	}
+}
+
+func messageEmitter(w *responseWriter, _ *http.Request, bb *[]byte) {
+	v := w.responseMessage.Load()
+	if v != nil {
+		*bb = append(*bb, v.(string)...)
+	} else {
+		*bb = append(*bb, '-')
+	}
 }
 
 func methodEmitter(_ *responseWriter, r *http.Request, bb *[]byte) {

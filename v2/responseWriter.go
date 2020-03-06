@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -18,9 +19,10 @@ type responseWriter struct {
 	begin, end time.Time // begin and end track the duration of the request for logging purposes
 
 	// size 16
-	requestHeaders map[string]string
-	responseError  string
-	responseWriter http.ResponseWriter
+	requestHeaders  map[string]string
+	responseError   string
+	responseMessage atomic.Value // string
+	responseWriter  http.ResponseWriter
 
 	// size 8
 	bytesWritten    int64
@@ -89,6 +91,11 @@ func (rw *responseWriter) Header() http.Header {
 		rw.responseHeaders = make(http.Header)
 	}
 	return rw.responseHeaders
+}
+
+// Message stores a message
+func (rw *responseWriter) Message(m string) {
+	rw.responseMessage.Store(m)
 }
 
 // Write writes the data to the connection as part of an HTTP reply.
