@@ -66,6 +66,14 @@ func TestStatusCounters1xx(t *testing.T) {
 	if got, want := counters.Get5xx(), uint64(0); got != want {
 		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
+
+	// get and reset counter
+	if got, want := counters.GetAndReset1xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := counters.Get1xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
 }
 
 func TestStatusCounters2xxWithoutHandlerWritingStatus(t *testing.T) {
@@ -106,6 +114,14 @@ func TestStatusCounters2xx(t *testing.T) {
 	if got, want := counters.Get5xx(), uint64(0); got != want {
 		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
+
+	// get and reset counter
+	if got, want := counters.GetAndReset2xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := counters.Get2xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
 }
 
 func TestStatusCounters3xx(t *testing.T) {
@@ -124,6 +140,14 @@ func TestStatusCounters3xx(t *testing.T) {
 		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 	if got, want := counters.Get5xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+
+	// get and reset counter
+	if got, want := counters.GetAndReset3xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := counters.Get3xx(), uint64(0); got != want {
 		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
@@ -146,6 +170,14 @@ func TestStatusCounters4xx(t *testing.T) {
 	if got, want := counters.Get5xx(), uint64(0); got != want {
 		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
+
+	// get and reset counter
+	if got, want := counters.GetAndReset4xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := counters.Get4xx(), uint64(0); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
 }
 
 func TestStatusCounters5xx(t *testing.T) {
@@ -164,6 +196,14 @@ func TestStatusCounters5xx(t *testing.T) {
 		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 	if got, want := counters.Get5xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+
+	// get and reset counter
+	if got, want := counters.GetAndReset5xx(), uint64(1); got != want {
+		t.Fatalf("GOT: %v; WANT: %v", got, want)
+	}
+	if got, want := counters.Get5xx(), uint64(0); got != want {
 		t.Fatalf("GOT: %v; WANT: %v", got, want)
 	}
 }
